@@ -37,10 +37,47 @@ function create ()
         platforms.create(x, 1048, 'platform').setOrigin(0, 0).refreshBody();
     }
 
+    player = this.physics.add.sprite(100, 450, 'cyborg');
+
+    player.setBounce(0.2);
+    player.setCollideWorldBounds(true);
+
+    this.anims.create({
+        key: 'left',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.anims.create({
+        key: 'right',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
+    this.physics.add.collider(player, platforms);
+
+
     this.scale.startFullscreen();
 }
 
 
 function update ()
 {
+    cursors = this.input.keyboard.createCursorKeys();
+
+    if (cursors.left.isDown) {
+        player.setVelocityX(-160);
+
+        player.anims.play('left', true);
+    }
+    else if (cursors.right.isDown) {
+        player.setVelocityX(160);
+
+        player.anims.play('right', true);
+    }
+    if (cursors.up.isDown && player.body.touching.down) {
+        player.setVelocityY(-330);
+    }
 }
