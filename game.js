@@ -101,3 +101,4 @@ function update() {
         player.setVelocityY(-330);
     }
 }
+
