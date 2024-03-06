@@ -18,7 +18,7 @@ var config = {
 
 var game = new Phaser.Game(config)
 var worldWidth = 9600
-var playerspeed = 1000
+var playerspeed = 480
 
 function preload() {
     this.load.image('background', 'assets/Background.png');
