@@ -48,8 +48,10 @@ function create() {
     for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(32, 128)) {
         var y = Phaser.Math.Between(256, 952)
         platforms.create(x-32, y, 'platform1').setOrigin(0, 0).refreshBody();
-        platforms.create(x, y, 'platform2').setOrigin(0, 0).refreshBody();
-        platforms.create(x+32, y, 'platform3').setOrigin(0, 0).refreshBody();
+        for(i = 0; i<=Phaser.Math.Between(1, 5); i++){
+                platforms.create(x+32*i, y, 'platform2').setOrigin(0, 0).refreshBody();
+        }        
+        platforms.create(x+32*i, y, 'platform3').setOrigin(0, 0).refreshBody();
     }
 
 
