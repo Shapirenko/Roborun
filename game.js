@@ -18,7 +18,11 @@ var config = {
 
 var game = new Phaser.Game(config)
 var worldWidth = 9600
-var playerspeed = 480
+var playerspeed = 320
+var score = 0
+var scoreText
+var money
+var gameOver = false
 
 function preload() {
     this.load.image('background', 'assets/Background.png');
@@ -33,6 +37,8 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
+    this.load.image('money', 'assets/Money.png');
+    this.load.image('bomb', 'assets/Bomb.png');
 }
 
 function create() {
@@ -45,8 +51,8 @@ function create() {
         platforms.create(x, 1016, 'platform').setOrigin(0, 0).refreshBody();
     }
 
-    for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(400, 600)) {
-        var y = Phaser.Math.Between(256, 950)
+    for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(400, 500)) {
+        var y = Phaser.Math.Between(400, 900)
         platforms.create(x-64, y, 'platform1').setOrigin(0, 0).refreshBody();
         for(i = 0; i<=Phaser.Math.Between(1, 4); i++){
                 platforms.create(x+64*i, y, 'platform2').setOrigin(0, 0).refreshBody();
@@ -102,6 +108,36 @@ function create() {
 
     this.physics.add.collider(player, platforms);
 
+    money = this.physics.add.group({
+        key: 'money',
+        repeat: 120,
+        setXY: { x: 12, y: 0, stepX: 80 }
+    });
+    
+    money.children.iterate(function (child) {
+
+        child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
+
+    });
+
+    this.physics.add.collider(money, platforms);
+    this.physics.add.overlap(player, money, collectMoney, null, this);
+
+    scoreText = this.add.text(0, 0, 'Score: 0', { fontSize: '32px', fill: '#000' })
+        .setOrigin(0,0)
+        .setScrollFactor(0) 
+
+    var resetButton = this.add.text(2, 100, 'reset',{ fontSize: '32px', fill: '#000' }).setInteractive().setScrollFactor(0);
+    resetButton.on('pointerdown', () =>{      
+        this.sceen.restart();       
+    });
+    
+    bombs = this.physics.add.group();
+
+    this.physics.add.collider(bombs, platforms);
+ 
+    this.physics.add.collider(player, bombs, hitBomb, null, this);
+
     //camera settings
     this.cameras.main.setBounds(0, 0, worldWidth, game.config.height);
     this.physics.world.setBounds(0, 0, worldWidth, game.config.height);
@@ -134,3 +170,31 @@ function update() {
     }
 }
 
+function collectMoney(player, money) {
+    money.disableBody(true, true);
+
+    score += 10;
+    scoreText.setText('Score: ' + score);
+
+    if (money === 0) {
+        money.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+
+        });
+    } 
+    var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
+
+        var bomb = bombs.create(x, 0, 'bomb');
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+}   
+
+function hitBomb(player, bomb) {
+    this.physics.pause();
+
+    player.setTint(0xff0000);
+
+    gameOver = true;
+}
