@@ -5,7 +5,7 @@ var config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 300 },
+            gravity: { y: 200 },
             debug: false
         }
     },
@@ -41,17 +41,17 @@ function create() {
     platforms = this.physics.add.staticGroup();
 
 
-    for (var x = 0; x <= worldWidth; x = x + 32) {
-        platforms.create(x, 1048, 'platform').setOrigin(0, 0).refreshBody();
+    for (var x = 0; x <= worldWidth; x = x + 64) {
+        platforms.create(x, 1016, 'platform').setOrigin(0, 0).refreshBody();
     }
 
-    for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(32, 128)) {
-        var y = Phaser.Math.Between(256, 952)
-        platforms.create(x-32, y, 'platform1').setOrigin(0, 0).refreshBody();
-        for(i = 0; i<=Phaser.Math.Between(1, 5); i++){
-                platforms.create(x+32*i, y, 'platform2').setOrigin(0, 0).refreshBody();
+    for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(400, 600)) {
+        var y = Phaser.Math.Between(256, 950)
+        platforms.create(x-64, y, 'platform1').setOrigin(0, 0).refreshBody();
+        for(i = 0; i<=Phaser.Math.Between(1, 4); i++){
+                platforms.create(x+64*i, y, 'platform2').setOrigin(0, 0).refreshBody();
         }        
-        platforms.create(x+32*i, y, 'platform3').setOrigin(0, 0).refreshBody();
+        platforms.create(x+64*i, y, 'platform3').setOrigin(0, 0).refreshBody();
     }
 
 
@@ -60,19 +60,19 @@ function create() {
 
     for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(200, 800)) {
         objects
-            .create(x, 1050, 'screen')
-            .setScale(Phaser.Math.FloatBetween(0.8, 1.7,))
+            .create(x, 1016, 'screen')
+            .setScale(Phaser.Math.FloatBetween(1.5, 3,))
             .setDepth(Phaser.Math.Between(0, 2))
             .setOrigin(0, 1)
             .refreshBody();
         objects
-            .create(x = x + Phaser.Math.Between(50, 200), 1050, 'box')
+            .create(x = x + Phaser.Math.Between(50, 200), 1016, 'box')
             .setScale(Phaser.Math.FloatBetween(0.5, 1.2,))
             .setDepth(Phaser.Math.Between(0, 2))
             .setOrigin(0, 1)
             .refreshBody();
         objects
-            .create(x = x + Phaser.Math.Between(45, 300), 1050, 'barrel')
+            .create(x = x + Phaser.Math.Between(45, 300), 1016, 'barrel')
             .setScale(Phaser.Math.FloatBetween(0.5, 1.2,))
             .setDepth(Phaser.Math.Between(0, 2))
             .setOrigin(0, 1)
@@ -83,7 +83,7 @@ function create() {
 
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
 
-    player.setBounce(0.2);
+    player.setBounce(0);
     player.setCollideWorldBounds(true);
 
     this.anims.create({
