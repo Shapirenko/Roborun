@@ -23,15 +23,19 @@ var score = 0
 var scoreText
 var money
 var gameOver = false
-var life = 3
+var life = 1
 
-//Заванатження асетів
+//Завантaження асетів
 function preload() {
 
     this.load.image('background', 'assets/Background.png');
-    this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
-    this.load.image('platform', 'assets/Platform.png');
 
+    this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
+    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 40, frameHeight: 64 });
+    this.load.spritesheet('cyborg_jump', 'assets/Cyborg_jump.png', { frameWidth: 60, frameHeight: 64 });
+    this.load.spritesheet('cyborg_death', 'assets/Cyborg_death.png', { frameWidth: 76, frameHeight: 64 });
+    
+    this.load.image('platform', 'assets/Platform.png');
     this.load.image('platform1', 'assets/IndustrialTile_1.png');
     this.load.image('platform2', 'assets/IndustrialTile_2.png');
     this.load.image('platform3', 'assets/IndustrialTile_3.png');
@@ -40,7 +44,7 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
-    this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 24, frameHeight: 24 });
+    this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
     this.load.image('bomb', 'assets/Bomb.png');
 }
 
@@ -56,7 +60,7 @@ function create() {
     }
 
     for (var x = 0; x <= worldWidth; x = x + Phaser.Math.Between(400, 500)) {
-        var y = Phaser.Math.Between(400, 900)
+        var y = Phaser.Math.Between(400, 850)
         platforms.create(x - 64, y, 'platform1').setOrigin(0, 0).refreshBody();
         for (i = 0; i <= Phaser.Math.Between(1, 4); i++) {
             platforms.create(x + 64 * i, y, 'platform2').setOrigin(0, 0).refreshBody();
@@ -89,7 +93,7 @@ function create() {
             .refreshBody();
     }
 
-    //
+    
     //створення персонажа
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
 
@@ -98,9 +102,27 @@ function create() {
     //фнімація в ліву сторону 
     this.anims.create({
         key: 'left',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 11 }),
         frameRate: 10,
         repeat: -1
+    });
+    this.anims.create({
+        key: 'idle',
+        frames: this.anims.generateFrameNumbers('cyborg_idle', { start: 0, end: 3 }),
+        frameRate: 4,
+        repeat: -1,
+    });
+    this.anims.create({
+        key: 'jump',
+        frames: this.anims.generateFrameNumbers('cyborg_jump', { start: 0, end: 3 }),
+        frameRate: 10,
+        repeat: -1,
+    });
+    this.anims.create({
+        key: 'death',
+        frames: this.anims.generateFrameNumbers('cyborg_death', { start: 0, end: 5 }),
+        frameRate: 6,
+        repeat: 1,
     });
     //Анімація в праву сторону 
     this.anims.create({
@@ -109,6 +131,7 @@ function create() {
         frameRate: 10,
         repeat: -1
     });
+    //Анімація грошей 
     this.anims.create({
         key: 'money_idle',
         frames: this.anims.generateFrameNumbers('money', { start: 0, end: 6 }),
@@ -125,10 +148,11 @@ function create() {
     });
 
     money.children.iterate(function (child) {
-
+        // Налаштування анімації для грошей
         child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-
+        child.anims.play('money_idle', true); 
     });
+
     //Взаємодія з грошима
     this.physics.add.collider(money, platforms);
     this.physics.add.overlap(player, money, collectMoney, null, this);
@@ -172,21 +196,29 @@ function update() {
 
     if (cursors.left.isDown) {
         player.setVelocityX(-playerspeed);
-
         player.anims.play('left', true);
+        player.setScale(-1, 1);
     }
     else if (cursors.right.isDown) {
         player.setVelocityX(playerspeed);
-
         player.anims.play('right', true);
+        player.setScale(1, 1);
     }
     else {
         player.setVelocityX(0);
+        player.anims.play('idle', true);
     }
+
     if (cursors.up.isDown && player.body.touching.down) {
         player.setVelocityY(-400);
+        player.anims.play('jump', true);
+    }
+
+    else if (!player.body.touching.down) {
+        player.anims.play('jump', true);
     }
 }
+
 //збір грошей
 function collectMoney(player, money) {
     money.disableBody(true, true);
@@ -220,13 +252,14 @@ function hitBomb(player, bomb) {
     //Перевірка умови наявності життів
     if (life == 0) {
         gameOver = true
-        this.physics.pause()
+        player.anims.play('death', true);
+        
         
         this.add.text(660, 490, 'For restart press: ENTER',{ fontSize: '64px', fill: '#fff' } )
         .setScrollFactor(0);
+        this.physics.pause()
 
-        
-
+    
         document.addEventListener('keyup', function(event) {
             if (event.code == 'Enter') {
                 window.location.reload()
