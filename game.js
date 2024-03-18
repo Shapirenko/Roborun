@@ -23,13 +23,13 @@ var score = 0
 var scoreText
 var money
 var gameOver = false
-var life = 2
+var life = 3
 
 //Заванатження асетів
 function preload() {
 
     this.load.image('background', 'assets/Background.png');
-    this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 48, frameHeight: 32 });
+    this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
     this.load.image('platform', 'assets/Platform.png');
 
     this.load.image('platform1', 'assets/IndustrialTile_1.png');
@@ -40,7 +40,7 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
-    this.load.image('money', 'assets/Money.png');
+    this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 24, frameHeight: 24 });
     this.load.image('bomb', 'assets/Bomb.png');
 }
 
@@ -106,6 +106,12 @@ function create() {
     this.anims.create({
         key: 'right',
         frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 11 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    this.anims.create({
+        key: 'money_idle',
+        frames: this.anims.generateFrameNumbers('money', { start: 0, end: 6 }),
         frameRate: 10,
         repeat: -1
     });
@@ -178,7 +184,7 @@ function update() {
         player.setVelocityX(0);
     }
     if (cursors.up.isDown && player.body.touching.down) {
-        player.setVelocityY(-330);
+        player.setVelocityY(-400);
     }
 }
 //збір грошей
