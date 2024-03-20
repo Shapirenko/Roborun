@@ -33,7 +33,7 @@ function preload() {
     this.load.image('background', 'assets/Background.png');
 
     this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
-    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 38, frameHeight: 64 });
+    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 40, frameHeight: 64 });
     this.load.spritesheet('cyborg_jump', 'assets/Cyborg_jump.png', { frameWidth: 60, frameHeight: 64 });
     this.load.spritesheet('cyborg_death', 'assets/Cyborg_death.png', { frameWidth: 76, frameHeight: 64 });
 
