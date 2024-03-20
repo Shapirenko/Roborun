@@ -24,6 +24,7 @@ var scoreText
 var money
 var gameOver = false
 var life = 1
+var enemySpeed = 420
 
 //Завантaження асетів
 function preload() {
@@ -34,7 +35,10 @@ function preload() {
     this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 40, frameHeight: 64 });
     this.load.spritesheet('cyborg_jump', 'assets/Cyborg_jump.png', { frameWidth: 60, frameHeight: 64 });
     this.load.spritesheet('cyborg_death', 'assets/Cyborg_death.png', { frameWidth: 76, frameHeight: 64 });
-    
+
+    this.load.spritesheet('enemy', 'assets/Idle.png', { frameWidth: 46, frameHeight: 48 });
+    this.load.spritesheet('enemy_attack', 'assets/Attack.png', { frameWidth: 48, frameHeight: 74 });
+
     this.load.image('platform', 'assets/Platform.png');
     this.load.image('platform1', 'assets/IndustrialTile_1.png');
     this.load.image('platform2', 'assets/IndustrialTile_2.png');
@@ -93,7 +97,7 @@ function create() {
             .refreshBody();
     }
 
-    
+
     //створення персонажа
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
 
@@ -138,19 +142,48 @@ function create() {
         frameRate: 10,
         repeat: -1
     });
-    // Колізія граця з платформами
+
+    this.anims.create({
+        key: 'enemy_move',
+        frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 3 }),
+        frameRate: 10,
+        repeat: -1
+    });
+    // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
+
+    enemies = this.physics.add.group({
+        key: 'enemy',
+        repeat: 9,
+        setXY: { x: 0, y: 0, stepX: 1000 }
+    });
+
+
+    this.physics.add.collider(player, enemies, hitEnemy, null, this);
+
+    this.physics.add.overlap(player, enemies, function (player, enemy) {
+        if (player.x < enemy.x && enemy.body.touching.left) {
+            enemy.setVelocityX(-200);
+        } else if (player.x > enemy.x && enemy.body.touching.right) {
+            enemy.setVelocityX(200);
+        }
+    }, null, this);
+
     // Створення грошей
     money = this.physics.add.group({
         key: 'money',
         repeat: 120,
         setXY: { x: 12, y: 0, stepX: 80 }
     });
+    hearts = this.physics.add.group({
+        repeat: 20,
+        setXY: { x: 12, y: 0, stepX: 400 }
+    });
 
     money.children.iterate(function (child) {
         // Налаштування анімації для грошей
         child.setBounceY(Phaser.Math.FloatBetween(0.4, 0.8));
-        child.anims.play('money_idle', true); 
+        child.anims.play('money_idle', true);
     });
 
     //Взаємодія з грошима
@@ -217,69 +250,69 @@ function update() {
     else if (!player.body.touching.down) {
         player.anims.play('jump', true);
     }
-}
 
-//збір грошей
-function collectMoney(player, money) {
-    money.disableBody(true, true);
 
-    score += 10;
-    scoreText.setText('Score: ' + score);
+    //збір грошей
+    function collectMoney(player, money) {
+        money.disableBody(true, true);
 
-    if (money === 0) {
-        money.children.iterate(function (child) {
+        score += 10;
+        scoreText.setText('Score: ' + score);
 
-            child.enableBody(true, child.x, 0, true, true);
+        if (money === 0) {
+            money.children.iterate(function (child) {
 
-        });
+                child.enableBody(true, child.x, 0, true, true);
+
+            });
+        }
+        var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
+
+        var bomb = bombs.create(x, 0, 'bomb');
+        bomb.setBounce(1);
+        bomb.setCollideWorldBounds(true);
+        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
     }
-    var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
+    //Колізія гравця та бомби
+    function hitBomb(player, bomb) {
+        bomb.disableBody(true, true);
 
-    var bomb = bombs.create(x, 0, 'bomb');
-    bomb.setBounce(1);
-    bomb.setCollideWorldBounds(true);
-    bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
-}
-//Колізія гравця та бомби
-function hitBomb(player, bomb) {
-    bomb.disableBody(true, true);
+        player.setTint(0xff0000);
+        life -= 1
+        lifeText.setText(showLife())
 
-    player.setTint(0xff0000);
-    life -= 1
-    lifeText.setText(showLife())
+        console.log('boom')
+        //Перевірка умови наявності життів
+        if (life == 0) {
+            gameOver = true
+            //player.anims.play('death');
+            this.physics.pause()
 
-    console.log('boom')
-    //Перевірка умови наявності життів
-    if (life == 0) {
-        gameOver = true
-        player.anims.play('death', true);
-        
-        
-        this.add.text(660, 490, 'For restart press: ENTER',{ fontSize: '64px', fill: '#fff' } )
-        .setScrollFactor(0);
-        this.physics.pause()
+            this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
+                .setScrollFactor(0);
 
-    
-        document.addEventListener('keyup', function(event) {
-            if (event.code == 'Enter') {
-                window.location.reload()
-            }
-        });
+
+
+            document.addEventListener('keyup', function (event) {
+                if (event.code == 'Enter') {
+                    window.location.reload()
+                }
+            });
+        }
     }
-}
-//Лінія життя
-function showLife() {
-    var lifeLine = ''
+    //Лінія життя
+    function showLife() {
+        var lifeLine = ''
 
-    for (var i = 0; i < life; i++) {
-        lifeLine = lifeLine + '🧯'
+        for (var i = 0; i < life; i++) {
+            lifeLine = lifeLine + '🧯'
+        }
+
+        return lifeLine
     }
 
-    return lifeLine
-}
-
-//Функція перезапуску
-function refreshBody() {
-    console.log('game over')
-    location.reload()
-}
+    //Функція перезапуску
+    function refreshBody() {
+        console.log('game over')
+        location.reload()
+    }
