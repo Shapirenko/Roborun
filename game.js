@@ -6,7 +6,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 200 },
-            debug: false
+            debug: true
         }
     },
     scene: {
@@ -23,8 +23,9 @@ var score = 0
 var scoreText
 var money
 var gameOver = false
-var life = 1
+var life = 5
 var enemySpeed = 420
+var enemyCount = 9
 
 //Завантaження асетів
 function preload() {
@@ -32,7 +33,7 @@ function preload() {
     this.load.image('background', 'assets/Background.png');
 
     this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
-    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 40, frameHeight: 64 });
+    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 38, frameHeight: 64 });
     this.load.spritesheet('cyborg_jump', 'assets/Cyborg_jump.png', { frameWidth: 60, frameHeight: 64 });
     this.load.spritesheet('cyborg_death', 'assets/Cyborg_death.png', { frameWidth: 76, frameHeight: 64 });
 
@@ -138,7 +139,7 @@ function create() {
     //Анімація грошей 
     this.anims.create({
         key: 'money_idle',
-        frames: this.anims.generateFrameNumbers('money', { start: 0, end: 6 }),
+        frames: this.anims.generateFrameNumbers('money', { start: 0, end: 5 }),
         frameRate: 10,
         repeat: -1
     });
@@ -152,22 +153,15 @@ function create() {
     // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
 
-    enemies = this.physics.add.group({
+    enemy = this.physics.add.group({
         key: 'enemy',
-        repeat: 9,
-        setXY: { x: 0, y: 0, stepX: 1000 }
+        repeat: enemyCount,
+        setXY: { x: 1000, y: 0, stepX: 1000 }
     });
 
+    this.physics.add.collider(enemy, platforms);
+    this.physics.add.collider(player, enemy, hitEnemy, null, this);
 
-    this.physics.add.collider(player, enemies, hitEnemy, null, this);
-
-    this.physics.add.overlap(player, enemies, function (player, enemy) {
-        if (player.x < enemy.x && enemy.body.touching.left) {
-            enemy.setVelocityX(-200);
-        } else if (player.x > enemy.x && enemy.body.touching.right) {
-            enemy.setVelocityX(200);
-        }
-    }, null, this);
 
     // Створення грошей
     money = this.physics.add.group({
@@ -194,7 +188,11 @@ function create() {
         .setOrigin(0, 0)
         .setScrollFactor(0)
     //Лінія життів
-    lifeText = this.add.text(1500, 100, showLife(), { fontSize: '32px', fill: '#000' })
+    lifeText = this.add.text(1500, 50, showTextSymbols('🧯', life), { fontSize: '32px', fill: '#000' })
+        .setOrigin(1, 0)
+        .setScrollFactor(0)
+    
+    enemyText = this.add.text(300, 50, showTextSymbols('🧬', enemyCount), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
     //Кнопка перезапуску
@@ -251,7 +249,13 @@ function update() {
         player.anims.play('jump', true);
     }
 
+    if (Math.abs(player.x - enemy.x) < 600) {
+        enemy.anims.play('idle', true);
+        enemy.moveTo(player, player.x, player.y, 300, 1)
 
+    }
+
+}
     //збір грошей
     function collectMoney(player, money) {
         money.disableBody(true, true);
@@ -279,7 +283,7 @@ function update() {
 
         player.setTint(0xff0000);
         life -= 1
-        lifeText.setText(showLife())
+        lifeText.setText(showTextSymbols())
 
         console.log('boom')
         //Перевірка умови наявності життів
@@ -288,7 +292,7 @@ function update() {
             //player.anims.play('death');
             this.physics.pause()
 
-            this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
+            this.add.text(560, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
                 .setScrollFactor(0);
 
 
@@ -301,14 +305,14 @@ function update() {
         }
     }
     //Лінія життя
-    function showLife() {
-        var lifeLine = ''
+    function showTextSymbols(symbol, count) {
+        var symbolLine = ''
 
-        for (var i = 0; i < life; i++) {
-            lifeLine = lifeLine + '🧯'
+        for (var i = 0; i < count; i++) {
+            symbolLine = symbolLine + symbol
         }
 
-        return lifeLine
+        return symbolLine
     }
 
     //Функція перезапуску
@@ -316,3 +320,30 @@ function update() {
         console.log('game over')
         location.reload()
     }
+
+function hitEnemy(player, bomb) {
+    bomb.disableBody(true, true);
+
+    player.setTint(0xff0000);
+    life -= 1
+    lifeText.setText(showLife())
+
+    console.log('boom')
+    //Перевірка умови наявності життів
+    if (life == 0) {
+        gameOver = true
+        //player.anims.play('death');
+        this.physics.pause()
+
+        this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
+            .setScrollFactor(0);
+
+
+
+        document.addEventListener('keyup', function (event) {
+            if (event.code == 'Enter') {
+                window.location.reload()
+            }
+        });
+    }
+}
