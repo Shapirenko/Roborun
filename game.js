@@ -6,7 +6,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 200 },
-            debug: false
+            debug: true
         }
     },
     scene: {
@@ -23,7 +23,7 @@ var score = 0
 var scoreText
 var money
 var gameOver = false
-var life = 5
+var life = 3
 var enemySpeed = 420
 var enemyCount = 9
 
@@ -32,13 +32,9 @@ function preload() {
 
     this.load.image('background', 'assets/Background.png');
 
-    this.load.spritesheet('cyborg', 'assets/Cyborg-1.png', { frameWidth: 96, frameHeight: 64 });
-    this.load.spritesheet('cyborg_idle', 'assets/Cyborg_idle.png', { frameWidth: 40, frameHeight: 64 });
-    this.load.spritesheet('cyborg_jump', 'assets/Cyborg_jump.png', { frameWidth: 60, frameHeight: 64 });
-    this.load.spritesheet('cyborg_death', 'assets/Cyborg_death.png', { frameWidth: 76, frameHeight: 64 });
+    this.load.spritesheet('cyborg', 'assets/Cyborg_run.png', { frameWidth: 57, frameHeight: 64 });
 
     this.load.spritesheet('enemy', 'assets/Idle.png', { frameWidth: 46, frameHeight: 48 });
-    this.load.spritesheet('enemy_attack', 'assets/Attack.png', { frameWidth: 48, frameHeight: 74 });
 
     this.load.image('platform', 'assets/Platform.png');
     this.load.image('platform1', 'assets/IndustrialTile_1.png');
@@ -54,6 +50,9 @@ function preload() {
 }
 
 function create() {
+
+    this.math = Phaser.Math;
+
     //Платформа в низу екрана
     this.background = this.add.tileSprite(0, 0, worldWidth, game.config.height, 'background').setOrigin(0, 0);
 
@@ -107,35 +106,42 @@ function create() {
     //фнімація в ліву сторону 
     this.anims.create({
         key: 'left',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 11 }),
-        frameRate: 10,
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frameRate: 8,
         repeat: -1
     });
     this.anims.create({
         key: 'idle',
-        frames: this.anims.generateFrameNumbers('cyborg_idle', { start: 0, end: 3 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 10, end: 14 }),
         frameRate: 4,
         repeat: -1,
     });
     this.anims.create({
         key: 'jump',
-        frames: this.anims.generateFrameNumbers('cyborg_jump', { start: 0, end: 3 }),
-        frameRate: 10,
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 9 }),
+        frameRate: 8,
         repeat: -1,
     });
     this.anims.create({
         key: 'death',
-        frames: this.anims.generateFrameNumbers('cyborg_death', { start: 0, end: 5 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 22, end: 27 }),
+        frameRate: 6,
+        repeat: 1,
+    });
+    this.anims.create({
+        key: 'attack',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 15, end: 22 }),
         frameRate: 6,
         repeat: 1,
     });
     //Анімація в праву сторону 
     this.anims.create({
         key: 'right',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 11 }),
-        frameRate: 10,
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frameRate: 8,
         repeat: -1
     });
+
     //Анімація грошей 
     this.anims.create({
         key: 'money_idle',
@@ -159,8 +165,21 @@ function create() {
         setXY: { x: 1000, y: 0, stepX: 1000 }
     });
 
+    enemy.children.iterate(function (child) {
+        child.setBounce(0);
+        child.setCollideWorldBounds(true);
+        child.moveBelow = 100; 
+
+        child.chasePlayer = true;
+        child.setScale(1, 1);
+        child.anims.play('enemy_move', true);
+    });
+
+    
+
     this.physics.add.collider(enemy, platforms);
     this.physics.add.collider(player, enemy, hitEnemy, null, this);
+    
 
 
     // Створення грошей
@@ -191,7 +210,7 @@ function create() {
     lifeText = this.add.text(1500, 50, showTextSymbols('🧯', life), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
-    
+
     enemyText = this.add.text(300, 50, showTextSymbols('🧬', enemyCount), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
@@ -229,121 +248,218 @@ function update() {
         player.setVelocityX(-playerspeed);
         player.anims.play('left', true);
         player.setScale(-1, 1);
-    }
-    else if (cursors.right.isDown) {
+        player.body.setSize(57, 64).setOffset(64, 0);
+    } else if (cursors.right.isDown) {
         player.setVelocityX(playerspeed);
         player.anims.play('right', true);
         player.setScale(1, 1);
-    }
-    else {
+        player.body.setSize(57, 64).setOffset(0, 0);
+    } else {
         player.setVelocityX(0);
-        player.anims.play('idle', true);
+        if (player.scaleX === -1) {
+            player.anims.play('idle', true);
+            player.body.setSize(57, 64).setOffset(64, 0);
+        } else {
+            player.anims.play('idle', true);
+            player.body.setSize(57, 64).setOffset(0, 0);
+        }
     }
 
     if (cursors.up.isDown && player.body.touching.down) {
         player.setVelocityY(-400);
         player.anims.play('jump', true);
-    }
-
-    else if (!player.body.touching.down) {
+    } else if (!player.body.touching.down) {
         player.anims.play('jump', true);
     }
 
-    if (Math.abs(player.x - enemy.x) < 600) {
-        enemy.anims.play('idle', true);
-        enemy.moveTo(player, player.x, player.y, 300, 1)
+    enemy.children.iterate(function (enemy) {
+        if (enemy.active) {
+            const playerToEnemy = player.x - enemy.x;
+            const playerToEnemyY = player.y - enemy.y;
 
-    }
+            // Check if the player is within the range
+            if (Math.abs(playerToEnemy) < 400) {
+                const enemySpeedModifier = 50;
+                const enemySpeedX = playerspeed * (playerToEnemy > 0 ? 1 : -1) * enemySpeedModifier / 200;
 
-}
-    //збір грошей
-    function collectMoney(player, money) {
-        money.disableBody(true, true);
+                // Set the enemy's acceleration
+                enemy.setAccelerationX(enemySpeedX);
 
-        score += 10;
-        scoreText.setText('Score: ' + score);
-
-        if (money === 0) {
-            money.children.iterate(function (child) {
-
-                child.enableBody(true, child.x, 0, true, true);
-
-            });
-        }
-        var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
-
-        var bomb = bombs.create(x, 0, 'bomb');
-        bomb.setBounce(1);
-        bomb.setCollideWorldBounds(true);
-        bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
-    }
-    //Колізія гравця та бомби
-    function hitBomb(player, bomb) {
-        bomb.disableBody(true, true);
-
-        player.setTint(0xff0000);
-        life -= 1
-        lifeText.setText(showTextSymbols())
-
-        console.log('boom')
-        //Перевірка умови наявності життів
-        if (life == 0) {
-            gameOver = true
-            //player.anims.play('death');
-            this.physics.pause()
-
-            this.add.text(560, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
-                .setScrollFactor(0);
-
-
-
-            document.addEventListener('keyup', function (event) {
-                if (event.code == 'Enter') {
-                    window.location.reload()
+                // Move the enemy vertically
+                if (Math.abs(playerToEnemyY) > 100) {
+                    const enemySpeedY = playerspeed * (playerToEnemyY > 0 ? 1 : -1) * enemySpeedModifier / 200;
+                    enemy.setAccelerationY(enemySpeedY);
+                } else {
+                    enemy.setAccelerationY(0);
                 }
-            });
+
+                // Set the enemy's velocity
+                enemy.setVelocityY(enemy.body.acceleration.y);
+
+                // Play the enemy's moving animation
+                enemy.anims.play('enemy_move', true);
+
+                // If the enemy collides with the player, stop the enemy
+                if (this.physics.world.collide(enemy, player)) {
+                    enemy.setAccelerationX(0);
+                    enemy.setVelocityY(0);
+                }
+            } else {
+                // If the player is outside of the range, return the enemy to its initial position
+                const initEnemyX = enemy.x;
+                const initEnemyY = enemy.y;
+
+                if (Math.abs(playerToEnemy) > 100) {
+                    const enemySpeedX = playerspeed * (initEnemyX > player.x ? -1 : 1) * enemySpeed/100;
+                    enemy.setAccelerationX(enemySpeedX);
+                } else {
+                    enemy.setAccelerationX(0);
+                }
+
+                if (playerToEnemyY > 100) {
+                    const enemySpeedY = playerspeed *(initEnemyY > player.y ? -1 : 1) * enemySpeed/100;
+                    enemy.setAccelerationY(enemySpeedY);
+                } else {
+                    enemy.setAccelerationY(0);
+                }
+
+                // Set the enemy's velocity
+                enemy.setVelocityY(enemy.body.acceleration.y);
+
+                // Play the enemy's idle animation
+                enemy.anims.play('enemy_idle', true);
+            }
         }
+    }, this);
+}   
+//збір грошей
+function collectMoney(player, money) {
+    money.disableBody(true, true);
+
+    score += 10;
+    scoreText.setText('Score: ' + score);
+
+    if (money === 0) {
+        money.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+
+        });
     }
-    //Лінія життя
-    function showTextSymbols(symbol, count) {
-        var symbolLine = ''
+    var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
 
-        for (var i = 0; i < count; i++) {
-            symbolLine = symbolLine + symbol
-        }
-
-        return symbolLine
-    }
-
-    //Функція перезапуску
-    function refreshBody() {
-        console.log('game over')
-        location.reload()
-    }
-
-function hitEnemy(player, bomb) {
+    var bomb = bombs.create(x, 0, 'bomb');
+    bomb.setBounce(1);
+    bomb.setCollideWorldBounds(true);
+    bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+}
+//Колізія гравця та бомби
+function hitBomb(player, bomb) {
     bomb.disableBody(true, true);
 
     player.setTint(0xff0000);
-    life -= 1
-    lifeText.setText(showLife())
+    life -= 1;
+    lifeText.setText(showTextSymbols('🧯', life)); // Update health text
 
-    console.log('boom')
-    //Перевірка умови наявності життів
-    if (life == 0) {
-        gameOver = true
-        //player.anims.play('death');
-        this.physics.pause()
+    console.log('boom');
+
+    if (life === 0) {
+        gameOver = true;
+        this.physics.pause();
+
+        this.add.text(560, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
+            .setScrollFactor(0);
+
+        document.addEventListener('keyup', function (event) {
+            if (event.code == 'Enter') {
+                window.location.reload();
+            }
+        });
+    }
+}
+
+
+//Лінія життя
+function showTextSymbols(symbol, count) {
+    var symbolLine = ''
+
+    for (var i = 0; i < count; i++) {
+        symbolLine = symbolLine + symbol
+    }
+
+    return symbolLine
+}
+
+//Функція перезапуску
+function refreshBody() {
+    console.log('game over')
+    location.reload()
+}
+
+function hitEnemy(player, enemy) {
+    enemy.disableBody(true, true);
+
+    player.setTint(0xff0000);
+    life -= 1;
+    enemyCount -= 1;
+    lifeText.setText(showTextSymbols('🧯', life)); 
+    enemyText.setText(showTextSymbols('🧬', enemyCount));
+
+    console.log('enemy hit');
+
+    if (life === 0) {
+        gameOver = true;
+        this.physics.pause();
 
         this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
             .setScrollFactor(0);
 
-
-
         document.addEventListener('keyup', function (event) {
             if (event.code == 'Enter') {
-                window.location.reload()
+                window.location.reload();
             }
         });
+    }
+}
+// Calculate the range between the player and the enemy
+function calculateRange(player, enemy) {
+    var dx = player.x - enemy.x;
+    var dy = player.y - enemy.y;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+// Update the enemy's behavior
+function updateEnemy(enemy, player) {
+    // Calculate the range between the player and the enemy
+    var range = calculateRange(player, enemy);
+
+    // If the range is within the enemy's attack range
+    if (range <= enemyAttackRange) {
+        // Attack the player
+        hitEnemy(player, enemy);
+    } else {
+        // Move towards the player
+        var enemySpeedX = 0;
+        var enemySpeedY = 0;
+
+        if (Math.abs(player.x - enemy.x) > 100) {
+            enemySpeedX = playerspeed * (player.x > enemy.x ? -1 : 1) * enemySpeed/1000;
+            enemy.setAccelerationX(enemySpeedX);
+        } else {
+            enemy.setAccelerationX(0);
+        }
+
+        if (Math.abs(player.y - enemy.y) > 100) {
+            enemySpeedY = playerspeed * (player.y > enemy.y ? -1 : 1) * enemySpeed/1000;
+            enemy.setAccelerationY(enemySpeedY);
+        } else {
+            enemy.setAccelerationY(0);
+        }
+
+        // Set the enemy's velocity
+        enemy.setVelocityY(enemy.body.acceleration.y);
+
+        // Play the enemy's idle animation
+        enemy.anims.play('enemy_idle', true);
     }
 }
