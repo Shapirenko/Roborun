@@ -23,7 +23,7 @@ var score = 0
 var scoreText
 var money
 var gameOver = false
-var life = 3
+var life = 5
 var enemySpeed = 420
 var enemyCount = 9
 
@@ -47,6 +47,7 @@ function preload() {
 
     this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
     this.load.image('bomb', 'assets/Bomb.png');
+    this.load.image('battery', 'assets/Battery.png');
 }
 
 function create() {
@@ -168,29 +169,40 @@ function create() {
     enemy.children.iterate(function (child) {
         child.setBounce(0);
         child.setCollideWorldBounds(true);
-        child.moveBelow = 100; 
+        child.moveBelow = 100;
 
         child.chasePlayer = true;
         child.setScale(1, 1);
         child.anims.play('enemy_move', true);
     });
 
-    
+
 
     this.physics.add.collider(enemy, platforms);
     this.physics.add.collider(player, enemy, hitEnemy, null, this);
-    
 
+
+
+
+    hearts = this.physics.add.group({
+        key: 'battery',
+        repeat: 20,
+        setXY: { x: 12, y: 0, stepX: 400 }
+    });
+
+    hearts.children.iterate(function (child) {
+
+        child.setScale(0.5);
+    });
+
+    this.physics.add.collider(hearts, platforms);
+    this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
     // Створення грошей
     money = this.physics.add.group({
         key: 'money',
         repeat: 120,
         setXY: { x: 12, y: 0, stepX: 80 }
-    });
-    hearts = this.physics.add.group({
-        repeat: 20,
-        setXY: { x: 12, y: 0, stepX: 400 }
     });
 
     money.children.iterate(function (child) {
@@ -207,7 +219,7 @@ function create() {
         .setOrigin(0, 0)
         .setScrollFactor(0)
     //Лінія життів
-    lifeText = this.add.text(1500, 50, showTextSymbols('🧯', life), { fontSize: '32px', fill: '#000' })
+    lifeText = this.add.text(1900, 30, showTextSymbols('⚡', life), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
 
@@ -277,15 +289,12 @@ function update() {
             const playerToEnemy = player.x - enemy.x;
             const playerToEnemyY = player.y - enemy.y;
 
-            // Check if the player is within the range
             if (Math.abs(playerToEnemy) < 400) {
                 const enemySpeedModifier = 50;
                 const enemySpeedX = playerspeed * (playerToEnemy > 0 ? 1 : -1) * enemySpeedModifier / 200;
 
-                // Set the enemy's acceleration
                 enemy.setAccelerationX(enemySpeedX);
 
-                // Move the enemy vertically
                 if (Math.abs(playerToEnemyY) > 100) {
                     const enemySpeedY = playerspeed * (playerToEnemyY > 0 ? 1 : -1) * enemySpeedModifier / 200;
                     enemy.setAccelerationY(enemySpeedY);
@@ -293,45 +302,37 @@ function update() {
                     enemy.setAccelerationY(0);
                 }
 
-                // Set the enemy's velocity
                 enemy.setVelocityY(enemy.body.acceleration.y);
 
-                // Play the enemy's moving animation
                 enemy.anims.play('enemy_move', true);
 
-                // If the enemy collides with the player, stop the enemy
                 if (this.physics.world.collide(enemy, player)) {
                     enemy.setAccelerationX(0);
                     enemy.setVelocityY(0);
                 }
             } else {
-                // If the player is outside of the range, return the enemy to its initial position
                 const initEnemyX = enemy.x;
                 const initEnemyY = enemy.y;
 
                 if (Math.abs(playerToEnemy) > 100) {
-                    const enemySpeedX = playerspeed * (initEnemyX > player.x ? -1 : 1) * enemySpeed/100;
+                    const enemySpeedX = playerspeed * (initEnemyX > player.x ? -1 : 1) * enemySpeed / 500;
                     enemy.setAccelerationX(enemySpeedX);
                 } else {
                     enemy.setAccelerationX(0);
                 }
 
                 if (playerToEnemyY > 100) {
-                    const enemySpeedY = playerspeed *(initEnemyY > player.y ? -1 : 1) * enemySpeed/100;
+                    const enemySpeedY = playerspeed * (initEnemyY > player.y ? -1 : 1) * enemySpeed / 500;
                     enemy.setAccelerationY(enemySpeedY);
                 } else {
                     enemy.setAccelerationY(0);
                 }
 
-                // Set the enemy's velocity
                 enemy.setVelocityY(enemy.body.acceleration.y);
-
-                // Play the enemy's idle animation
-                enemy.anims.play('enemy_idle', true);
             }
         }
     }, this);
-}   
+}
 //збір грошей
 function collectMoney(player, money) {
     money.disableBody(true, true);
@@ -353,13 +354,31 @@ function collectMoney(player, money) {
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
 }
+
+function collectHearts(player, hearts) {
+    hearts.disableBody(true, true);
+
+    console.log()
+
+    life += 1;
+    lifeText.setText(showTextSymbols('⚡', life))
+
+    if (hearts === 0) {
+        hearts.children.iterate(function (child) {
+
+            child.enableBody(true, child.x, 0, true, true);
+
+        });
+    }
+    
+}
 //Колізія гравця та бомби
 function hitBomb(player, bomb) {
     bomb.disableBody(true, true);
 
     player.setTint(0xff0000);
     life -= 1;
-    lifeText.setText(showTextSymbols('🧯', life)); // Update health text
+    lifeText.setText(showTextSymbols('⚡', life)); // Update health text
 
     console.log('boom');
 
@@ -401,8 +420,9 @@ function hitEnemy(player, enemy) {
 
     player.setTint(0xff0000);
     life -= 1;
+    lifeText.setText(showTextSymbols('⚡', life));
+
     enemyCount -= 1;
-    lifeText.setText(showTextSymbols('🧯', life)); 
     enemyText.setText(showTextSymbols('🧬', enemyCount));
 
     console.log('enemy hit');
@@ -443,14 +463,14 @@ function updateEnemy(enemy, player) {
         var enemySpeedY = 0;
 
         if (Math.abs(player.x - enemy.x) > 100) {
-            enemySpeedX = playerspeed * (player.x > enemy.x ? -1 : 1) * enemySpeed/1000;
+            enemySpeedX = playerspeed * (player.x > enemy.x ? -1 : 1) * enemySpeed / 1000;
             enemy.setAccelerationX(enemySpeedX);
         } else {
             enemy.setAccelerationX(0);
         }
 
         if (Math.abs(player.y - enemy.y) > 100) {
-            enemySpeedY = playerspeed * (player.y > enemy.y ? -1 : 1) * enemySpeed/1000;
+            enemySpeedY = playerspeed * (player.y > enemy.y ? -1 : 1) * enemySpeed / 1000;
             enemy.setAccelerationY(enemySpeedY);
         } else {
             enemy.setAccelerationY(0);
