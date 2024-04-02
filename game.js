@@ -26,6 +26,7 @@ var gameOver = false
 var life = 5
 var enemySpeed = 420
 var enemyCount = 9
+var totalStars = 0
 
 //Завантaження асетів
 function preload() {
@@ -33,6 +34,7 @@ function preload() {
     this.load.image('background', 'assets/Background.png');
 
     this.load.spritesheet('cyborg', 'assets/Cyborg_run.png', { frameWidth: 57, frameHeight: 64 });
+    this.load.image('slash', 'assets/Attack.png');
 
     this.load.spritesheet('enemy', 'assets/Idle.png', { frameWidth: 46, frameHeight: 48 });
 
@@ -131,7 +133,7 @@ function create() {
     });
     this.anims.create({
         key: 'attack',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 15, end: 22 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 15, end: 20 }),
         frameRate: 6,
         repeat: 1,
     });
@@ -159,44 +161,6 @@ function create() {
     });
     // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
-
-    enemy = this.physics.add.group({
-        key: 'enemy',
-        repeat: enemyCount,
-        setXY: { x: 1000, y: 0, stepX: 1000 }
-    });
-
-    enemy.children.iterate(function (child) {
-        child.setBounce(0);
-        child.setCollideWorldBounds(true);
-        child.moveBelow = 100;
-
-        child.chasePlayer = true;
-        child.setScale(1, 1);
-        child.anims.play('enemy_move', true);
-    });
-
-
-
-    this.physics.add.collider(enemy, platforms);
-    this.physics.add.collider(player, enemy, hitEnemy, null, this);
-
-
-
-
-    hearts = this.physics.add.group({
-        key: 'battery',
-        repeat: 20,
-        setXY: { x: 12, y: 0, stepX: 400 }
-    });
-
-    hearts.children.iterate(function (child) {
-
-        child.setScale(0.5);
-    });
-
-    this.physics.add.collider(hearts, platforms);
-    this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
     // Створення грошей
     money = this.physics.add.group({
@@ -242,6 +206,16 @@ function create() {
     this.physics.add.collider(bombs, platforms);
 
     this.physics.add.collider(player, bombs, hitBomb, null, this);
+
+    enemy = this.physics.add.group();
+
+    this.physics.add.collider(enemy, platforms);
+    this.physics.add.collider(player, enemy, hitEnemy, null, this);
+
+    hearts = this.physics.add.group();
+
+    this.physics.add.collider(hearts, platforms);
+    this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
     //camera settings
     this.cameras.main.setBounds(0, 0, worldWidth, game.config.height);
@@ -333,35 +307,75 @@ function update() {
         }
     }, this);
 }
-//збір грошей
+
 function collectMoney(player, money) {
     money.disableBody(true, true);
 
     score += 10;
     scoreText.setText('Score: ' + score);
 
-    if (money === 0) {
-        money.children.iterate(function (child) {
+    
 
-            child.enableBody(true, child.x, 0, true, true);
+    // Check if the score is a multiple of 10
+    if (score % 10 === 0) {
+        spawnBomb();
+        totalStars++;
+    }
 
+    // Check if the score is a multiple of 100
+    if (score % 80 === 0) {
+        spawnBattery();
+    }
+
+    if (score % 50 === 0) {
+        spawnEnemy();
+    }
+
+    if (totalStars === 120) {
+        // Display end text
+        this.add.text(560, 490, 'Congratulations! You collected all stars!\nPress ENTER to play again.', { fontSize: '32px', fill: '#fff' })
+            .setScrollFactor(0);
+
+        // Listen for key press to restart the game
+        document.addEventListener('keyup', function (event) {
+            if (event.code == 'Enter') {
+                window.location.reload();
+            }
         });
     }
-    var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
+}
 
+function spawnBattery() {
+    var battery = hearts.create(player.x, player.y - 500, 'battery'); // Spawn directly above the player
+    battery.setScale(0.5);
+    battery.setVelocity(0, 0); // Set velocity to zero so it doesn't move
+}
+
+function spawnBomb() {
+    var x = (player.x < worldWidth) ? Phaser.Math.Between(0, worldWidth) : Phaser.Math.Between(0, worldWidth);
     var bomb = bombs.create(x, 0, 'bomb');
     bomb.setBounce(1);
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
 }
 
+function spawnEnemy() {
+    var newEnemy = enemy.create(player.x - 200, player.y - 500, 'enemy');
+    newEnemy.setBounce(0);
+    newEnemy.setCollideWorldBounds(true);
+    newEnemy.setScale(1, 1);
+    newEnemy.anims.play('enemy_move', true);
+}
+
 function collectHearts(player, hearts) {
     hearts.disableBody(true, true);
 
-    console.log()
-
+    player.clearTint();
     life += 1;
     lifeText.setText(showTextSymbols('⚡', life))
+
+    console.log('heal')
+
 
     if (hearts === 0) {
         hearts.children.iterate(function (child) {
@@ -370,7 +384,7 @@ function collectHearts(player, hearts) {
 
         });
     }
-    
+
 }
 //Колізія гравця та бомби
 function hitBomb(player, bomb) {
@@ -441,45 +455,4 @@ function hitEnemy(player, enemy) {
         });
     }
 }
-// Calculate the range between the player and the enemy
-function calculateRange(player, enemy) {
-    var dx = player.x - enemy.x;
-    var dy = player.y - enemy.y;
-    return Math.sqrt(dx * dx + dy * dy);
-}
 
-// Update the enemy's behavior
-function updateEnemy(enemy, player) {
-    // Calculate the range between the player and the enemy
-    var range = calculateRange(player, enemy);
-
-    // If the range is within the enemy's attack range
-    if (range <= enemyAttackRange) {
-        // Attack the player
-        hitEnemy(player, enemy);
-    } else {
-        // Move towards the player
-        var enemySpeedX = 0;
-        var enemySpeedY = 0;
-
-        if (Math.abs(player.x - enemy.x) > 100) {
-            enemySpeedX = playerspeed * (player.x > enemy.x ? -1 : 1) * enemySpeed / 1000;
-            enemy.setAccelerationX(enemySpeedX);
-        } else {
-            enemy.setAccelerationX(0);
-        }
-
-        if (Math.abs(player.y - enemy.y) > 100) {
-            enemySpeedY = playerspeed * (player.y > enemy.y ? -1 : 1) * enemySpeed / 1000;
-            enemy.setAccelerationY(enemySpeedY);
-        } else {
-            enemy.setAccelerationY(0);
-        }
-
-        // Set the enemy's velocity
-        enemy.setVelocityY(enemy.body.acceleration.y);
-
-        // Play the enemy's idle animation
-        enemy.anims.play('enemy_idle', true);
-    }
-}
