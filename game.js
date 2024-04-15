@@ -6,7 +6,7 @@ var config = {
         default: 'arcade',
         arcade: {
             gravity: { y: 200 },
-            debug: true
+            debug: false
         }
     },
     scene: {
@@ -25,7 +25,7 @@ var money
 var gameOver = false
 var life = 5
 var enemySpeed = 420
-var enemyCount = 9
+var enemyCount = 0
 var totalStars = 0
 
 //Завантaження асетів
@@ -329,6 +329,7 @@ function collectMoney(player, money) {
 
     if (score % 50 === 0) {
         spawnEnemy();
+        enemyCount +=1;
     }
 
     if (totalStars === 120) {
