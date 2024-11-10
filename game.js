@@ -5,8 +5,8 @@ var config = {
     physics: {
         default: 'arcade',
         arcade: {
-            gravity: { y: 200 },
-            debug: false
+            gravity: { y: 400 },
+            debug: true
         }
     },
     scene: {
@@ -17,14 +17,14 @@ var config = {
 };
 
 var game = new Phaser.Game(config)
-var worldWidth = 9600
+var worldWidth = 3840
 var playerspeed = 400
 var score = 0
 var scoreText
 var money
 var gameOver = false
 var life = 5
-var enemySpeed = 420
+var enemySpeed = 400
 var enemyCount = 0
 var totalStars = 0
 
@@ -33,7 +33,11 @@ function preload() {
 
     this.load.image('background', 'assets/Background.png');
 
-    this.load.spritesheet('cyborg', 'assets/Cyborg_run.png', { frameWidth: 57, frameHeight: 64 });
+    this.load.spritesheet('cyborg', 'assets/Necromancer.png', { 
+        frameWidth: 84,
+        frameHeight: 104,
+        margin: 124,
+        spacing: 236,  });
     this.load.image('slash', 'assets/Attack.png');
 
     this.load.spritesheet('enemy', 'assets/Idle.png', { frameWidth: 46, frameHeight: 48 });
@@ -103,44 +107,46 @@ function create() {
 
     //створення персонажа
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
+    
+
 
     player.setBounce(0);
     player.setCollideWorldBounds(true);
     //фнімація в ліву сторону 
     this.anims.create({
         key: 'left',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 17, end: 22 }),
         frameRate: 8,
         repeat: -1
     });
     this.anims.create({
         key: 'idle',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 10, end: 14 }),
-        frameRate: 4,
-        repeat: -1,
-    });
-    this.anims.create({
-        key: 'jump',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 6, end: 9 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 7 }),
         frameRate: 8,
         repeat: -1,
     });
     this.anims.create({
-        key: 'death',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 22, end: 27 }),
+        key: 'airmove',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 17, end: 22 }),
+        frameRate: 8,
+        repeat: -1,
+    });
+    this.anims.create({
+        key: 'attack',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 34, end: 50 }),
         frameRate: 6,
         repeat: 1,
     });
     this.anims.create({
-        key: 'attack',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 15, end: 20 }),
+        key: 'death',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 68, end: 76 }),
         frameRate: 6,
         repeat: 1,
     });
     //Анімація в праву сторону 
     this.anims.create({
         key: 'right',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 0, end: 5 }),
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 17, end: 22 }),
         frameRate: 8,
         repeat: -1
     });
@@ -158,6 +164,13 @@ function create() {
         frames: this.anims.generateFrameNumbers('enemy', { start: 0, end: 3 }),
         frameRate: 10,
         repeat: -1
+    });
+
+    this.anims.create({
+        key: 'hit',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 51, end: 55 }), 
+        frameRate: 10,
+        repeat: 0
     });
     // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
@@ -234,28 +247,28 @@ function update() {
         player.setVelocityX(-playerspeed);
         player.anims.play('left', true);
         player.setScale(-1, 1);
-        player.body.setSize(57, 64).setOffset(64, 0);
+        player.body.setOffset(84, 0);
     } else if (cursors.right.isDown) {
         player.setVelocityX(playerspeed);
         player.anims.play('right', true);
         player.setScale(1, 1);
-        player.body.setSize(57, 64).setOffset(0, 0);
+        player.body.setOffset(0, 0);
     } else {
         player.setVelocityX(0);
         if (player.scaleX === -1) {
             player.anims.play('idle', true);
-            player.body.setSize(57, 64).setOffset(64, 0);
+            player.body.setOffset(84, 0);
         } else {
             player.anims.play('idle', true);
-            player.body.setSize(57, 64).setOffset(0, 0);
+            player.body.setOffset(0, 0);
         }
     }
 
     if (cursors.up.isDown && player.body.touching.down) {
-        player.setVelocityY(-400);
-        player.anims.play('jump', true);
+        player.setVelocityY(-600);
+        player.anims.play('airmove', true);
     } else if (!player.body.touching.down) {
-        player.anims.play('jump', true);
+        player.anims.play('airmove', true);
     }
 
     enemy.children.iterate(function (enemy) {
@@ -389,11 +402,13 @@ function collectHearts(player, hearts) {
 }
 //Колізія гравця та бомби
 function hitBomb(player, bomb) {
-    bomb.disableBody(true, true);
+    bomb.disableBody(true, true); // Disable the bomb on collision
 
-    player.setTint(0xff0000);
-    life -= 1;
-    lifeText.setText(showTextSymbols('⚡', life)); // Update health text
+    player.setTint(0xff0000); // Apply red tint to indicate damage
+    player.anims.play('hit'); // Play the hit animation
+
+    life -= 1; // Decrease player life
+    lifeText.setText(showTextSymbols('⚡', life)); // Update life display
 
     console.log('boom');
 
@@ -431,14 +446,16 @@ function refreshBody() {
 }
 
 function hitEnemy(player, enemy) {
-    enemy.disableBody(true, true);
+    enemy.disableBody(true, true); // Disable the enemy on collision
+    
+    player.setTint(0xff0000); // Set tint to indicate damage
+    player.anims.play('hit'); // Play the hit animation
 
-    player.setTint(0xff0000);
-    life -= 1;
-    lifeText.setText(showTextSymbols('⚡', life));
+    life -= 1; // Reduce life by 1
+    lifeText.setText(showTextSymbols('⚡', life)); // Update life display
 
-    enemyCount -= 1;
-    enemyText.setText(showTextSymbols('🧬', enemyCount));
+    enemyCount -= 1; // Reduce enemy count
+    enemyText.setText(showTextSymbols('🧬', enemyCount)); // Update enemy display
 
     console.log('enemy hit');
 
