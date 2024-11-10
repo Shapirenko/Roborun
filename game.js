@@ -52,7 +52,7 @@ function preload() {
     this.load.image('screen', 'assets/Screen.png');
 
     this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
-    this.load.image('bomb', 'assets/Bomb.png');
+    this.load.spritesheet('bomb', 'assets/Bomb.png', { frameWidth: 32, frameHeight: 32 });
     this.load.image('battery', 'assets/Battery.png');
 }
 
@@ -104,7 +104,12 @@ function create() {
             .refreshBody();
     }
 
-
+    if (this.textures.exists('cyborg')) {
+        console.log('Cyborg texture loaded');
+    } else {
+        console.log('Cyborg texture not found');
+    }
+    
     //створення персонажа
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
     
@@ -150,7 +155,12 @@ function create() {
         frameRate: 8,
         repeat: -1
     });
-
+    this.anims.create({
+        key: 'hit',
+        frames: this.anims.generateFrameNumbers('cyborg', { start: 51, end: 55 }), 
+        frameRate: 10,
+        repeat: 0
+    });
     //Анімація грошей 
     this.anims.create({
         key: 'money_idle',
@@ -167,10 +177,10 @@ function create() {
     });
 
     this.anims.create({
-        key: 'hit',
-        frames: this.anims.generateFrameNumbers('cyborg', { start: 51, end: 55 }), 
-        frameRate: 10,
-        repeat: 0
+        key: 'bomb_idle',
+        frames: this.anims.generateFrameNumbers('bomb', { start: 0, end: 29 }), // Adjust start and end based on frames available
+        frameRate: 18, // Adjust frame rate for smoothness
+        repeat: -1     // Loop the animation
     });
     // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
@@ -242,6 +252,10 @@ function create() {
 //Рух за допомогою стрілочок
 function update() {
     cursors = this.input.keyboard.createCursorKeys();
+
+    if (player.anims.currentAnim && player.anims.currentAnim.key === 'hit') {
+        return; // Skip update while playing "hit" animation
+    }
 
     if (cursors.left.isDown) {
         player.setVelocityX(-playerspeed);
@@ -319,6 +333,13 @@ function update() {
             }
         }
     }, this);
+
+    bombs.children.iterate(function (bomb) {
+        if (bomb.active) {
+            // Update the bomb's rotation based on its velocity direction
+            bomb.rotation = Math.atan2(bomb.body.velocity.y, bomb.body.velocity.x);
+        }
+    });
 }
 
 function collectMoney(player, money) {
@@ -371,6 +392,11 @@ function spawnBomb() {
     bomb.setBounce(1);
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
+
+    bomb.body.setSize(26, 26); // Set new hitbox size (width, height)
+    bomb.body.setOffset(5, 5); // Optional: Offset the hitbox from the sprite
+    // Play the bomb idle animation
+    bomb.anims.play('bomb_idle', true);
 }
 
 function spawnEnemy() {
@@ -384,7 +410,6 @@ function spawnEnemy() {
 function collectHearts(player, hearts) {
     hearts.disableBody(true, true);
 
-    player.clearTint();
     life += 1;
     lifeText.setText(showTextSymbols('⚡', life))
 
@@ -404,8 +429,11 @@ function collectHearts(player, hearts) {
 function hitBomb(player, bomb) {
     bomb.disableBody(true, true); // Disable the bomb on collision
 
-    player.setTint(0xff0000); // Apply red tint to indicate damage
     player.anims.play('hit'); // Play the hit animation
+
+    player.on('animationcomplete-hit', function () {
+        player.anims.play('idle');
+    });
 
     life -= 1; // Decrease player life
     lifeText.setText(showTextSymbols('⚡', life)); // Update life display
@@ -448,8 +476,11 @@ function refreshBody() {
 function hitEnemy(player, enemy) {
     enemy.disableBody(true, true); // Disable the enemy on collision
     
-    player.setTint(0xff0000); // Set tint to indicate damage
     player.anims.play('hit'); // Play the hit animation
+
+    player.on('animationcomplete-hit', function () {
+        player.anims.play('idle');
+    });
 
     life -= 1; // Reduce life by 1
     lifeText.setText(showTextSymbols('⚡', life)); // Update life display
