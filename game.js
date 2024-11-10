@@ -51,8 +51,9 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
+    this.load.spritesheet('scull', 'assets/Scull.png', { frameWidth: 128, frameHeight: 128 });
     this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
-    this.load.spritesheet('bomb', 'assets/Bomb.png', { frameWidth: 32, frameHeight: 32 });
+    this.load.spritesheet('bomb', 'assets/Bomb_1.png', { frameWidth: 64, frameHeight: 64 });
     this.load.image('battery', 'assets/Battery.png');
 }
 
@@ -139,8 +140,8 @@ function create() {
     this.anims.create({
         key: 'attack',
         frames: this.anims.generateFrameNumbers('cyborg', { start: 34, end: 50 }),
-        frameRate: 6,
-        repeat: 1,
+        frameRate: 17,
+        repeat: 0,
     });
     this.anims.create({
         key: 'death',
@@ -182,6 +183,14 @@ function create() {
         frameRate: 18, // Adjust frame rate for smoothness
         repeat: -1     // Loop the animation
     });
+
+    this.anims.create({
+        key: 'projectile_move',
+        frames: this.anims.generateFrameNumbers('slash', { start: 0, end: 3 }),
+        frameRate: 10,
+        repeat: -1
+    });
+
     // Колізія гравця з платформами
     this.physics.add.collider(player, platforms);
 
@@ -240,6 +249,10 @@ function create() {
     this.physics.add.collider(hearts, platforms);
     this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
+    projectiles = this.physics.add.group();
+
+    // Set up controls
+    this.input.on('pointerdown', attack, this);
     //camera settings
     this.cameras.main.setBounds(0, 0, worldWidth, game.config.height);
     this.physics.world.setBounds(0, 0, worldWidth, game.config.height);
@@ -255,6 +268,10 @@ function update() {
 
     if (player.anims.currentAnim && player.anims.currentAnim.key === 'hit') {
         return; // Skip update while playing "hit" animation
+    }
+
+    if (player.anims.currentAnim && player.anims.currentAnim.key === 'attack') {
+        return; // Skip updates while attacking
     }
 
     if (cursors.left.isDown) {
@@ -340,6 +357,15 @@ function update() {
             bomb.rotation = Math.atan2(bomb.body.velocity.y, bomb.body.velocity.x);
         }
     });
+
+    projectiles.children.iterate(function (projectile) {
+        if (projectile.active) {
+            // Disable gravity for projectiles
+            projectile.body.gravity.y = 0;
+        }
+    });
+
+    
 }
 
 function collectMoney(player, money) {
@@ -393,8 +419,8 @@ function spawnBomb() {
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
 
-    bomb.body.setSize(26, 26); // Set new hitbox size (width, height)
-    bomb.body.setOffset(5, 5); // Optional: Offset the hitbox from the sprite
+    bomb.body.setSize(52, 52); // Set new hitbox size (width, height)
+    bomb.body.setOffset(11, 11); // Optional: Offset the hitbox from the sprite
     // Play the bomb idle animation
     bomb.anims.play('bomb_idle', true);
 }
@@ -505,3 +531,34 @@ function hitEnemy(player, enemy) {
     }
 }
 
+// Attack function - cooldown, alignment with the player, and firing a single projectile
+function attack() {
+    if (attackCooldown || player.anims.currentAnim && player.anims.currentAnim.key === 'attack') {
+        return; // Skip attack if cooldown is active or animation is already playing
+    }
+
+    attackCooldown = true;
+    lastAttackTime = this.time.now;
+
+    // Play attack animation
+    player.anims.play('attack', true);
+
+    // Spawn projectile
+    const projectile = projectiles.create(player.x, player.y, 'slash');
+    projectile.setVelocity(1000, 0); // Example velocity; adjust for aim
+
+    // Align the projectile with player direction
+    if (player.scaleX === -1) {
+        projectile.setVelocityX(-1000); // Fire to the left if player is facing left
+    } else {
+        projectile.setVelocityX(1000); // Fire to the right if player is facing right
+    }
+
+    // Disable gravity for the projectile
+    projectile.body.gravity.y = 0;
+
+    // Wait for attack animation to complete before allowing another attack
+    player.on('animationcomplete-attack', function () {
+        attackCooldown = false;
+    });
+}
