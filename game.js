@@ -27,6 +27,7 @@ var life = 5
 var enemySpeed = 400
 var enemyCount = 0
 var totalStars = 0
+var attackCooldown = false;
 
 //Завантaження асетів
 function preload() {
@@ -51,7 +52,7 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
-    this.load.spritesheet('scull', 'assets/Scull.png', { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet('scull', 'assets/Skull.png', { frameWidth: 128, frameHeight: 128 });
     this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
     this.load.spritesheet('bomb', 'assets/Bomb_1.png', { frameWidth: 64, frameHeight: 64 });
     this.load.image('battery', 'assets/Battery.png');
@@ -185,8 +186,8 @@ function create() {
     });
 
     this.anims.create({
-        key: 'projectile_move',
-        frames: this.anims.generateFrameNumbers('slash', { start: 0, end: 3 }),
+        key: 'projectile_anim',
+        frames: this.anims.generateFrameNumbers('scull', { start: 0, end: 7 }),
         frameRate: 10,
         repeat: -1
     });
@@ -531,34 +532,53 @@ function hitEnemy(player, enemy) {
     }
 }
 
-// Attack function - cooldown, alignment with the player, and firing a single projectile
 function attack() {
-    if (attackCooldown || player.anims.currentAnim && player.anims.currentAnim.key === 'attack') {
-        return; // Skip attack if cooldown is active or animation is already playing
+    // Ensure attack is not on cooldown and that player can attack
+    if (attackCooldown || (player.anims.currentAnim && player.anims.currentAnim.key === 'attack')) {
+        return;
     }
 
     attackCooldown = true;
-    lastAttackTime = this.time.now;
+    projectileSpawned = false;
 
-    // Play attack animation
+    // Play the attack animation
     player.anims.play('attack', true);
 
-    // Spawn projectile
-    const projectile = projectiles.create(player.x, player.y, 'slash');
-    projectile.setVelocity(1000, 0); // Example velocity; adjust for aim
+    // Event listener for the specific frame to spawn the projectile
+    player.on('animationupdate', (anim, frame) => {
+        if (frame.index === 5 && !projectileSpawned) {
+            const projectile = projectiles.create(player.x, player.y, 'projectile_sprite');
+            this.physics.add.existing(projectile);
 
-    // Align the projectile with player direction
-    if (player.scaleX === -1) {
-        projectile.setVelocityX(-1000); // Fire to the left if player is facing left
-    } else {
-        projectile.setVelocityX(1000); // Fire to the right if player is facing right
-    }
+            // Set gravity, bounce, and initial velocity
+            projectile.body.setGravityY(300);
+            projectile.body.setBounce(0.5);
+            const velocityX = player.scaleX === -1 ? -1000 : 1000;
+            const velocityY = -200;
 
-    // Disable gravity for the projectile
-    projectile.body.gravity.y = 0;
+            projectile.setVelocity(velocityX, velocityY);
+            projectile.anims.play('projectile_anim', true);
 
-    // Wait for attack animation to complete before allowing another attack
-    player.on('animationcomplete-attack', function () {
+            // Rotate the projectile based on its velocity
+            projectile.update = function () {
+                const angle = Math.atan2(projectile.body.velocity.y, projectile.body.velocity.x);
+                projectile.setRotation(angle);
+            };
+
+            // Add collisions to destroy the projectile upon impact
+            this.physics.add.collider(projectile, platforms, () => projectile.destroy());
+            this.physics.add.overlap(projectile, enemies, (projectile, enemy) => {
+                projectile.destroy();
+                enemy.takeDamage(); // Example function for enemy
+            });
+
+            projectileSpawned = true;
+        }
+    });
+
+    // Reset player state after the attack animation completes
+    player.once('animationcomplete-attack', () => {
+        player.anims.play('idle', true);
         attackCooldown = false;
     });
 }
