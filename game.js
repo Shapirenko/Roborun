@@ -52,10 +52,10 @@ function preload() {
     this.load.image('barrel', 'assets/Barrel.png');
     this.load.image('screen', 'assets/Screen.png');
 
-    this.load.spritesheet('scull', 'assets/Skull.png', { frameWidth: 128, frameHeight: 128 });
+    this.load.spritesheet('scull', 'assets/Skull.png', { frameWidth: 64, frameHeight: 64 });
     this.load.spritesheet('money', 'assets/Money.png', { frameWidth: 34, frameHeight: 30 });
     this.load.spritesheet('bomb', 'assets/Bomb_1.png', { frameWidth: 64, frameHeight: 64 });
-    this.load.image('battery', 'assets/Battery.png');
+    this.load.image('battery', 'assets/HP.png');
 }
 
 function create() {
@@ -106,11 +106,7 @@ function create() {
             .refreshBody();
     }
 
-    if (this.textures.exists('cyborg')) {
-        console.log('Cyborg texture loaded');
-    } else {
-        console.log('Cyborg texture not found');
-    }
+    
     
     //створення персонажа
     player = this.physics.add.sprite(100, 450, 'cyborg').setDepth(1);
@@ -141,7 +137,7 @@ function create() {
     this.anims.create({
         key: 'attack',
         frames: this.anims.generateFrameNumbers('cyborg', { start: 34, end: 50 }),
-        frameRate: 17,
+        frameRate: 28,
         repeat: 0,
     });
     this.anims.create({
@@ -216,7 +212,7 @@ function create() {
         .setOrigin(0, 0)
         .setScrollFactor(0)
     //Лінія життів
-    lifeText = this.add.text(1900, 30, showTextSymbols('⚡', life), { fontSize: '32px', fill: '#000' })
+    lifeText = this.add.text(1900, 30, showTextSymbols('💀', life), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
 
@@ -251,6 +247,8 @@ function create() {
     this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
     projectiles = this.physics.add.group();
+
+    
 
     // Set up controls
     this.input.on('pointerdown', attack, this);
@@ -384,7 +382,7 @@ function collectMoney(player, money) {
     }
 
     // Check if the score is a multiple of 100
-    if (score % 80 === 0) {
+    if (score % 60 === 0) {
         spawnBattery();
     }
 
@@ -438,9 +436,8 @@ function collectHearts(player, hearts) {
     hearts.disableBody(true, true);
 
     life += 1;
-    lifeText.setText(showTextSymbols('⚡', life))
+    lifeText.setText(showTextSymbols('💀', life))
 
-    console.log('heal')
 
 
     if (hearts === 0) {
@@ -463,9 +460,7 @@ function hitBomb(player, bomb) {
     });
 
     life -= 1; // Decrease player life
-    lifeText.setText(showTextSymbols('⚡', life)); // Update life display
-
-    console.log('boom');
+    lifeText.setText(showTextSymbols('💀', life)); // Update life display
 
     if (life === 0) {
         gameOver = true;
@@ -510,10 +505,10 @@ function hitEnemy(player, enemy) {
     });
 
     life -= 1; // Reduce life by 1
-    lifeText.setText(showTextSymbols('⚡', life)); // Update life display
+    lifeText.setText(showTextSymbols('💀', life)); // Update life display
 
     enemyCount -= 1; // Reduce enemy count
-    enemyText.setText(showTextSymbols('🧬', enemyCount)); // Update enemy display
+    enemyText.setText(showTextSymbols('🔋', enemyCount)); // Update enemy display
 
     console.log('enemy hit');
 
@@ -533,7 +528,6 @@ function hitEnemy(player, enemy) {
 }
 
 function attack() {
-    // Ensure attack is not on cooldown and that player can attack
     if (attackCooldown || (player.anims.currentAnim && player.anims.currentAnim.key === 'attack')) {
         return;
     }
@@ -541,42 +535,54 @@ function attack() {
     attackCooldown = true;
     projectileSpawned = false;
 
-    // Play the attack animation
     player.anims.play('attack', true);
 
-    // Event listener for the specific frame to spawn the projectile
     player.on('animationupdate', (anim, frame) => {
-        if (frame.index === 5 && !projectileSpawned) {
-            const projectile = projectiles.create(player.x, player.y, 'projectile_sprite');
+        if (frame.index === 14 && !projectileSpawned) {
+            // Spawn the projectile at the right center of the player
+            const spawnX = player.x + player.width / 2 * player.scaleX; // Adjust spawn based on facing direction
+            const spawnY = player.y;
+            const projectile = projectiles.create(spawnX, spawnY, 'projectile_sprite');
             this.physics.add.existing(projectile);
 
-            // Set gravity, bounce, and initial velocity
-            projectile.body.setGravityY(300);
-            projectile.body.setBounce(0.5);
-            const velocityX = player.scaleX === -1 ? -1000 : 1000;
-            const velocityY = -200;
+            // Set projectile hitbox to half size and adjust offset
+            projectile.body.setSize(projectile.width * 1.5, projectile.height / 1.3);
+            projectile.body.setOffset(projectile.width / 2, projectile.height / 1.3);
 
-            projectile.setVelocity(velocityX, velocityY);
+            // Determine velocity and flip based on player direction
+            const velocityX = player.scaleX === -1 ? -1000 : 1000;
+            projectile.setVelocity(velocityX, 0); // No Y velocity for a straight line
+            projectile.body.setAllowGravity(false); // Disable gravity
+
+            // Flip the projectile if firing to the left
+            projectile.setFlipX(player.scaleX === -1);
+
+            // Play the projectile animation
             projectile.anims.play('projectile_anim', true);
 
-            // Rotate the projectile based on its velocity
+            // Update rotation to follow movement vector
             projectile.update = function () {
                 const angle = Math.atan2(projectile.body.velocity.y, projectile.body.velocity.x);
                 projectile.setRotation(angle);
             };
 
-            // Add collisions to destroy the projectile upon impact
+            // Destroy projectile on impact with platforms or enemies
             this.physics.add.collider(projectile, platforms, () => projectile.destroy());
-            this.physics.add.overlap(projectile, enemies, (projectile, enemy) => {
+            this.physics.add.overlap(projectile, enemy, (projectile, enemy) => {
                 projectile.destroy();
-                enemy.takeDamage(); // Example function for enemy
+                enemy.destroy();
+            });
+
+            // Destroy projectile and bomb on impact
+            this.physics.add.overlap(projectile, bombs, (projectile, bomb) => {
+                projectile.destroy();
+                bomb.destroy();
             });
 
             projectileSpawned = true;
         }
     });
 
-    // Reset player state after the attack animation completes
     player.once('animationcomplete-attack', () => {
         player.anims.play('idle', true);
         attackCooldown = false;
