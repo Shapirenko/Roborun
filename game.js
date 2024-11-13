@@ -216,7 +216,7 @@ function create() {
         .setOrigin(1, 0)
         .setScrollFactor(0)
 
-    enemyText = this.add.text(300, 50, showTextSymbols('🧬', enemyCount), { fontSize: '32px', fill: '#000' })
+    enemyText = this.add.text(195, 50, showTextSymbols('🧬', enemyCount), { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
     //Кнопка перезапуску
@@ -424,12 +424,52 @@ function spawnBomb() {
     bomb.anims.play('bomb_idle', true);
 }
 
+// Function to spawn an enemy
 function spawnEnemy() {
     var newEnemy = enemy.create(player.x - 200, player.y - 500, 'enemy');
     newEnemy.setBounce(0);
     newEnemy.setCollideWorldBounds(true);
     newEnemy.setScale(1, 1);
     newEnemy.anims.play('enemy_move', true);
+
+    // Increment enemy count and update enemyText
+    enemyCount += 1;
+    enemyText.setText('Enemies: ' + enemyCount);
+}
+
+// Function for when the player collides with an enemy
+function hitEnemy(player, enemy) {
+    enemy.disableBody(true, true); // Disable the enemy on collision
+    
+    player.anims.play('hit'); // Play the hit animation
+
+    player.on('animationcomplete-hit', function () {
+        player.anims.play('idle');
+    });
+
+    life -= 1; // Reduce life by 1
+    lifeText.setText(showTextSymbols('💀', life)); // Update life display
+
+    // Decrement enemy count and update enemyText
+    enemyCount -= 1;
+    enemyText.setText('Enemies: ' + enemyCount);
+    
+
+    console.log('enemy hit');
+
+    if (life === 0) {
+        gameOver = true;
+        this.physics.pause();
+
+        this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
+            .setScrollFactor(0);
+
+        document.addEventListener('keyup', function (event) {
+            if (event.code == 'Enter') {
+                window.location.reload();
+            }
+        });
+    }
 }
 
 function collectHearts(player, hearts) {
@@ -495,37 +535,6 @@ function refreshBody() {
     location.reload()
 }
 
-function hitEnemy(player, enemy) {
-    enemy.disableBody(true, true); // Disable the enemy on collision
-    
-    player.anims.play('hit'); // Play the hit animation
-
-    player.on('animationcomplete-hit', function () {
-        player.anims.play('idle');
-    });
-
-    life -= 1; // Reduce life by 1
-    lifeText.setText(showTextSymbols('💀', life)); // Update life display
-
-    enemyCount -= 1; // Reduce enemy count
-    enemyText.setText(showTextSymbols('🔋', enemyCount)); // Update enemy display
-
-    console.log('enemy hit');
-
-    if (life === 0) {
-        gameOver = true;
-        this.physics.pause();
-
-        this.add.text(660, 490, 'For restart press: ENTER', { fontSize: '64px', fill: '#fff' })
-            .setScrollFactor(0);
-
-        document.addEventListener('keyup', function (event) {
-            if (event.code == 'Enter') {
-                window.location.reload();
-            }
-        });
-    }
-}
 
 function attack() {
     if (attackCooldown || (player.anims.currentAnim && player.anims.currentAnim.key === 'attack')) {
