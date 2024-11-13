@@ -28,6 +28,7 @@ var enemySpeed = 400
 var enemyCount = 0
 var totalStars = 0
 var attackCooldown = false;
+var stars = 10
 
 //Завантaження асетів
 function preload() {
@@ -194,7 +195,7 @@ function create() {
     // Створення грошей
     money = this.physics.add.group({
         key: 'money',
-        repeat: 120,
+        repeat: stars-1,
         setXY: { x: 12, y: 0, stepX: 80 }
     });
 
@@ -216,11 +217,12 @@ function create() {
         .setOrigin(1, 0)
         .setScrollFactor(0)
 
-    enemyText = this.add.text(195, 50, showTextSymbols('🧬', enemyCount), { fontSize: '32px', fill: '#000' })
+    enemyText = this.add.text(195, 50, 'Enemies: ' + enemyCount, { fontSize: '32px', fill: '#000' })
         .setOrigin(1, 0)
         .setScrollFactor(0)
+
     //Кнопка перезапуску
-    var resetButton = this.add.text(2, 100, 'reset', { fontSize: '32px', fill: '#000' })
+    resetButton = this.add.text(2, 100, 'reset', { fontSize: '32px', fill: '#000' })
         .setInteractive()
         .setScrollFactor(0);
 
@@ -391,10 +393,9 @@ function collectMoney(player, money) {
         enemyCount +=1;
     }
 
-    if (totalStars === 120) {
+    if (totalStars === stars) {
         // Display end text
-        this.add.text(560, 490, 'Congratulations! You collected all stars!\nPress ENTER to play again.', { fontSize: '32px', fill: '#fff' })
-            .setScrollFactor(0);
+        showLeaderboardPopup.call(this);
 
         // Listen for key press to restart the game
         document.addEventListener('keyup', function (event) {
@@ -580,6 +581,8 @@ function attack() {
             this.physics.add.overlap(projectile, enemy, (projectile, enemy) => {
                 projectile.destroy();
                 enemy.destroy();
+                enemyCount -= 1;
+                enemyText.setText('Enemies: ' + enemyCount);
             });
 
             // Destroy projectile and bomb on impact
@@ -597,3 +600,45 @@ function attack() {
         attackCooldown = false;
     });
 }
+
+function showLeaderboardPopup() {
+    // Create a semi-transparent background for the modal
+    const modalBackground = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
+    modalBackground.setScrollFactor(0);
+
+    // Add a leaderboard title
+    const leaderboardTitle = this.add.text(300, 150, 'Leaderboard', { fontSize: '48px', fill: '#ffffff' })
+        .setScrollFactor(0);
+
+    // Display leaderboard data (you could replace this with actual data)
+    const leaderboardData = ['Player1: 100', 'Player2: 90', 'Player3: 80']; // Example data
+    let yOffset = 200;
+    leaderboardData.forEach((entry, index) => {
+        this.add.text(300, yOffset + (index * 40), entry, { fontSize: '32px', fill: '#ffffff' })
+            .setScrollFactor(0);
+    });
+
+    // Add a restart button
+    const restartButton = this.add.text(350, 500, 'Restart Game', { fontSize: '32px', fill: '#ff0000', backgroundColor: '#ffffff' })
+        .setInteractive()
+        .setScrollFactor(0);
+
+    restartButton.on('pointerdown', () => {
+        // Restart the game (reload the scene)
+        this.scene.restart();
+    });
+
+    // Group all pop-up elements so they can be easily removed later
+    this.popupElements = [modalBackground, leaderboardTitle, restartButton];
+    leaderboardData.forEach((_, index) => {
+        const textElement = this.add.text(300, yOffset + (index * 40), leaderboardData[index], { fontSize: '32px', fill: '#ffffff' }).setScrollFactor(0);
+        this.popupElements.push(textElement);
+    });
+}
+
+// Optional: Remove pop-up elements if you need to
+function removePopup() {
+    this.popupElements.forEach(element => element.destroy());
+}
+
+
