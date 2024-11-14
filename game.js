@@ -28,7 +28,11 @@ var enemySpeed = 400
 var enemyCount = 0
 var totalStars = 0
 var attackCooldown = false;
-var stars = 10
+var stars = worldWidth/80
+let playerScore = 0;       // Player's current score
+let gameTime = 0;          // Time spent in the game (in seconds)
+let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || []; // Load leaderboard from localStorage
+let timerInterval;
 
 //Завантaження асетів
 function preload() {
@@ -228,7 +232,6 @@ function create() {
 
     //При натисканні рестарт
     resetButton.on('pointerdown', function () {
-        console.log('restart')
         refreshBody()
     });
     // додання бомбочок
@@ -249,6 +252,9 @@ function create() {
     this.physics.add.overlap(player, hearts, collectHearts, null, this);
 
     projectiles = this.physics.add.group();
+
+    gameTime = 0;
+    timerInterval = setInterval(() => gameTime++, 1000)
 
     
 
@@ -396,6 +402,8 @@ function collectMoney(player, money) {
     if (totalStars === stars) {
         // Display end text
         showLeaderboardPopup.call(this);
+        gameOver = true;
+        this.physics.pause();
 
         // Listen for key press to restart the game
         document.addEventListener('keyup', function (event) {
@@ -453,10 +461,7 @@ function hitEnemy(player, enemy) {
 
     // Decrement enemy count and update enemyText
     enemyCount -= 1;
-    enemyText.setText('Enemies: ' + enemyCount);
-    
-
-    console.log('enemy hit');
+    enemyText.setText('Enemies: ' + enemyCount);  // Update enemy text
 
     if (life === 0) {
         gameOver = true;
@@ -532,11 +537,9 @@ function showTextSymbols(symbol, count) {
 
 //Функція перезапуску
 function refreshBody() {
-    console.log('game over')
-    location.reload()
+    // Completely reload the window, resetting all game states
+    window.location.reload();
 }
-
-
 function attack() {
     if (attackCooldown || (player.anims.currentAnim && player.anims.currentAnim.key === 'attack')) {
         return;
@@ -601,44 +604,109 @@ function attack() {
     });
 }
 
+// Function to show the leaderboard pop-up window centered on the screen
+
 function showLeaderboardPopup() {
-    // Create a semi-transparent background for the modal
-    const modalBackground = this.add.rectangle(400, 300, 800, 600, 0x000000, 0.7);
-    modalBackground.setScrollFactor(0);
+        // Stop the timer
+        clearInterval(timerInterval);
 
-    // Add a leaderboard title
-    const leaderboardTitle = this.add.text(300, 150, 'Leaderboard', { fontSize: '48px', fill: '#ffffff' })
-        .setScrollFactor(0);
+        // Add current score and time to leaderboard
+        leaderboard.push({ score: score, time: gameTime });
+        leaderboard.sort((a, b) => b.score - a.score); // Sort leaderboard by score
+        leaderboard = leaderboard.slice(0, 5); // Limit to top 5 scores
+        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
 
-    // Display leaderboard data (you could replace this with actual data)
-    const leaderboardData = ['Player1: 100', 'Player2: 90', 'Player3: 80']; // Example data
-    let yOffset = 200;
-    leaderboardData.forEach((entry, index) => {
-        this.add.text(300, yOffset + (index * 40), entry, { fontSize: '32px', fill: '#ffffff' })
-            .setScrollFactor(0);
-    });
+        // Build leaderboard list
+        const leaderboardText = leaderboard.map((entry, index) => {
+            return `<li>${index + 1}. Score: ${entry.score}, Time: ${entry.time} sec</li>`;
+        }).join('');
 
-    // Add a restart button
-    const restartButton = this.add.text(350, 500, 'Restart Game', { fontSize: '32px', fill: '#ff0000', backgroundColor: '#ffffff' })
-        .setInteractive()
-        .setScrollFactor(0);
+        // Show leaderboard in the popup
+        const popupOverlay = document.getElementById('popup-overlay');
+        const popupTitle = document.getElementById('popup-title');
+        const popupLeaderboard = document.getElementById('popup-leaderboard');
+        const popupButton = document.getElementById('popup-button');
 
-    restartButton.on('pointerdown', () => {
-        // Restart the game (reload the scene)
-        this.scene.restart();
-    });
+        // Ensure the elements exist before modifying them
+        if (popupOverlay && popupTitle && popupLeaderboard && popupButton) {
+            popupTitle.innerHTML = 'Leaderboard:';
+            popupLeaderboard.innerHTML = leaderboardText;
 
-    // Group all pop-up elements so they can be easily removed later
-    this.popupElements = [modalBackground, leaderboardTitle, restartButton];
-    leaderboardData.forEach((_, index) => {
-        const textElement = this.add.text(300, yOffset + (index * 40), leaderboardData[index], { fontSize: '32px', fill: '#ffffff' }).setScrollFactor(0);
-        this.popupElements.push(textElement);
-    });
+            // Show the popup overlay
+            popupOverlay.style.display = 'flex';
+
+            // Restart button functionality
+            popupButton.onclick = function () {
+                console.log("Restart button clicked");
+                refreshBody();
+                popupOverlay.style.display = 'none'; // Hide the popup after clicking restart
+            };
+
+            // Close the popup on 'Enter' key press
+            document.addEventListener('keyup', function (event) {
+                if (event.code == 'Enter') {
+                    console.log("Enter key pressed");
+                    refreshBody();
+                    popupOverlay.style.display = 'none'; // Hide the popup
+                }
+            }, { once: true });
+        } else {
+            console.error("Popup elements are not found.");
+        }
 }
+
 
 // Optional: Remove pop-up elements if you need to
 function removePopup() {
     this.popupElements.forEach(element => element.destroy());
 }
 
+function startTimer() {
+    gameTime = 0;
+    timerInterval = setInterval(() => {
+      gameTime++;
+      updateGameTimeUI(); // Function to update the time display if needed
+    }, 1000);
+  }
+  
+  function stopTimer() {
+    clearInterval(timerInterval);
+  }
 
+  function saveToLeaderboard(name) {
+    // Stop the timer
+    stopTimer();
+  
+    // Create a new leaderboard entry
+    const newEntry = {
+      name: name || "Player",  // Replace with a prompt or user input if needed
+      score: playerScore,
+      time: gameTime
+    };
+  
+    // Add the new entry to the leaderboard array
+    leaderboard.push(newEntry);
+  
+    // Sort leaderboard by score, and then by time for ties (lower time is better)
+    leaderboard.sort((a, b) => b.score - a.score || a.time - b.time);
+  
+    // Keep only the top 5 entries (or any desired number)
+    leaderboard = leaderboard.slice(0, 5);
+  
+    // Save updated leaderboard to localStorage
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+  }
+
+  function endGame(won) {
+    if (won) {
+      // Stop the timer
+      stopTimer();
+  
+      // Save the score to leaderboard
+      const playerName = prompt("Enter your name:");
+      saveToLeaderboard(playerName);
+  
+      // Show the leaderboard
+      showLeaderboard();
+    }
+  }
