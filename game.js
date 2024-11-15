@@ -30,9 +30,9 @@ var enemyCount = 0
 var totalStars = 0
 var attackCooldown = false;
 var stars = worldWidth/80
-let playerScore = 0;       // Player's current score
-let gameTime = 0;          // Time spent in the game (in seconds)
-let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || []; // Load leaderboard from localStorage
+let playerScore = 0;       // Поточний рахунок гравця
+let gameTime = 0;          // Час, проведений у грі (в секундах)
+let leaderboard = JSON.parse(localStorage.getItem("leaderboard")) || []; // Завантаження таблиці лідерів з localStorage
 let timerInterval;
 
 //Завантaження асетів
@@ -182,9 +182,9 @@ function create() {
 
     this.anims.create({
         key: 'bomb_idle',
-        frames: this.anims.generateFrameNumbers('bomb', { start: 0, end: 29 }), // Adjust start and end based on frames available
-        frameRate: 18, // Adjust frame rate for smoothness
-        repeat: -1     // Loop the animation
+        frames: this.anims.generateFrameNumbers('bomb', { start: 0, end: 29 }), // Налаштування початку та кінця кадрів
+        frameRate: 18, // Налаштування частоти кадрів для плавності
+        repeat: -1     // Зациклити анімацію
     });
 
     this.anims.create({
@@ -259,13 +259,13 @@ function create() {
 
     
 
-    // Set up controls
+    // Налаштування керування
     this.input.on('pointerdown', attack, this);
-    //camera settings
+    //Налаштування камери
     this.cameras.main.setBounds(0, 0, worldWidth, game.config.height);
     this.physics.world.setBounds(0, 0, worldWidth, game.config.height);
 
-    //camera follow
+    //Слідкування камери
     this.cameras.main.startFollow(player);
 
 }
@@ -275,11 +275,11 @@ function update() {
     cursors = this.input.keyboard.createCursorKeys();
 
     if (player.anims.currentAnim && player.anims.currentAnim.key === 'hit') {
-        return; // Skip update while playing "hit" animation
+        return; // Пропустити оновлення під час відтворення анімації "удару"
     }
 
     if (player.anims.currentAnim && player.anims.currentAnim.key === 'attack') {
-        return; // Skip updates while attacking
+        return; // Пропустити оновлення під час атаки
     }
 
     if (cursors.left.isDown) {
@@ -361,14 +361,14 @@ function update() {
 
     bombs.children.iterate(function (bomb) {
         if (bomb.active) {
-            // Update the bomb's rotation based on its velocity direction
+            // Оновлюємо обертання бомби на основі напрямку її швидкості
             bomb.rotation = Math.atan2(bomb.body.velocity.y, bomb.body.velocity.x);
         }
     });
 
     projectiles.children.iterate(function (projectile) {
         if (projectile.active) {
-            // Disable gravity for projectiles
+            // Вимикаємо гравітацію для снарядів
             projectile.body.gravity.y = 0;
         }
     });
@@ -378,19 +378,16 @@ function update() {
 
 function collectMoney(player, money) {
     money.disableBody(true, true);
-
     score += 10;
     scoreText.setText('Score: ' + score);
 
-    
-
-    // Check if the score is a multiple of 10
+    // Перевіряємо чи рахунок кратний 10
     if (score % 10 === 0) {
         spawnBomb();
         totalStars++;
     }
 
-    // Check if the score is a multiple of 100
+    // Перевіряємо чи рахунок кратний 100
     if (score % 60 === 0) {
         spawnBattery();
     }
@@ -401,12 +398,12 @@ function collectMoney(player, money) {
     }
 
     if (totalStars === stars) {
-        // Display end text
+        // Показуємо текст завершення
         showLeaderboardPopup.call(this);
         gameOver = true;
         this.physics.pause();
 
-        // Listen for key press to restart the game
+        // Очікуємо натискання клавіші для перезапуску гри
         document.addEventListener('keyup', function (event) {
             if (event.code == 'Enter') {
                 window.location.reload();
@@ -416,9 +413,9 @@ function collectMoney(player, money) {
 }
 
 function spawnBattery() {
-    var battery = hearts.create(player.x, player.y - 500, 'battery'); // Spawn directly above the player
+    var battery = hearts.create(player.x, player.y - 500, 'battery'); // Створюємо батарею прямо над гравцем
     battery.setScale(0.5);
-    battery.setVelocity(0, 0); // Set velocity to zero so it doesn't move
+    battery.setVelocity(0, 0); // Встановлюємо швидкість на нуль, щоб вона не рухалась
 }
 
 function spawnBomb() {
@@ -428,13 +425,13 @@ function spawnBomb() {
     bomb.setCollideWorldBounds(true);
     bomb.setVelocity(Phaser.Math.Between(-200, 200), 20);
 
-    bomb.body.setSize(52, 52); // Set new hitbox size (width, height)
-    bomb.body.setOffset(11, 11); // Optional: Offset the hitbox from the sprite
-    // Play the bomb idle animation
+    bomb.body.setSize(52, 52); // Встановлюємо новий розмір хітбоксу (ширина, висота)
+    bomb.body.setOffset(11, 11); // Опціонально: Зміщення хітбоксу відносно спрайту
+    // Відтворюємо анімацію простою бомби
     bomb.anims.play('bomb_idle', true);
 }
 
-// Function to spawn an enemy
+// Функція для створення ворога
 function spawnEnemy() {
     var newEnemy = enemy.create(player.x - 200, player.y - 500, 'enemy');
     newEnemy.setBounce(0);
@@ -442,27 +439,27 @@ function spawnEnemy() {
     newEnemy.setScale(1, 1);
     newEnemy.anims.play('enemy_move', true);
 
-    // Increment enemy count and update enemyText
+    // Збільшуємо лічильник ворогів і оновлюємо текст
     enemyCount += 1;
     enemyText.setText('Enemies: ' + enemyCount);
 }
 
-// Function for when the player collides with an enemy
+// Функція для обробки зіткнення гравця з ворогом
 function hitEnemy(player, enemy) {
-    enemy.disableBody(true, true); // Disable the enemy on collision
-    
-    player.anims.play('hit'); // Play the hit animation
+    enemy.disableBody(true, true); // Вимикаємо ворога при зіткненні
+
+    player.anims.play('hit'); // Відтворюємо анімацію удару
 
     player.on('animationcomplete-hit', function () {
         player.anims.play('idle');
     });
 
-    life -= 1; // Reduce life by 1
-    lifeText.setText(showTextSymbols('💀', life)); // Update life display
+    life -= 1; // Зменшуємо життя на 1
+    lifeText.setText(showTextSymbols('💀', life)); // Оновлюємо відображення життів
 
-    // Decrement enemy count and update enemyText
+    // Зменшуємо лічильник ворогів і оновлюємо текст
     enemyCount -= 1;
-    enemyText.setText('Enemies: ' + enemyCount);  // Update enemy text
+    enemyText.setText('Enemies: ' + enemyCount); // Оновлюємо текст ворогів
 
     if (life === 0) {
         gameOver = true;
@@ -498,16 +495,16 @@ function collectHearts(player, hearts) {
 }
 //Колізія гравця та бомби
 function hitBomb(player, bomb) {
-    bomb.disableBody(true, true); // Disable the bomb on collision
+    bomb.disableBody(true, true); // Вимикаємо бомбу при зіткненні
 
-    player.anims.play('hit'); // Play the hit animation
+    player.anims.play('hit'); // Відтворюємо анімацію удару
 
     player.on('animationcomplete-hit', function () {
         player.anims.play('idle');
     });
 
-    life -= 1; // Decrease player life
-    lifeText.setText(showTextSymbols('💀', life)); // Update life display
+    life -= 1; // Зменшуємо життя гравця
+    lifeText.setText(showTextSymbols('💀', life)); // Оновлюємо відображення життів
 
     if (life === 0) {
         gameOver = true;
@@ -538,9 +535,10 @@ function showTextSymbols(symbol, count) {
 
 //Функція перезапуску
 function refreshBody() {
-    // Completely reload the window, resetting all game states
+    // Повністю перезавантажуємо вікно, скидаючи всі стани гри
     window.location.reload();
 }
+
 function attack() {
     if (attackCooldown || (player.anims.currentAnim && player.anims.currentAnim.key === 'attack')) {
         return;
@@ -553,34 +551,34 @@ function attack() {
 
     player.on('animationupdate', (anim, frame) => {
         if (frame.index === 14 && !projectileSpawned) {
-            // Spawn the projectile at the right center of the player
-            const spawnX = player.x + player.width / 2 * player.scaleX; // Adjust spawn based on facing direction
+            // Створюємо снаряд справа від центру гравця
+            const spawnX = player.x + player.width / 2 * player.scaleX; // Корегуємо появу відповідно до напрямку погляду
             const spawnY = player.y;
             const projectile = projectiles.create(spawnX, spawnY, 'projectile_sprite');
             this.physics.add.existing(projectile);
 
-            // Set projectile hitbox to half size and adjust offset
+            // Встановлюємо хітбокс снаряду в половину розміру та корегуємо зміщення
             projectile.body.setSize(projectile.width * 1.5, projectile.height / 1.3);
             projectile.body.setOffset(projectile.width / 2, projectile.height / 1.3);
 
-            // Determine velocity and flip based on player direction
+            // Визначаємо швидкість та відображення на основі напрямку гравця
             const velocityX = player.scaleX === -1 ? -1000 : 1000;
-            projectile.setVelocity(velocityX, 0); // No Y velocity for a straight line
-            projectile.body.setAllowGravity(false); // Disable gravity
+            projectile.setVelocity(velocityX, 0); // Без швидкості по Y для прямої лінії
+            projectile.body.setAllowGravity(false); // Вимикаємо гравітацію
 
-            // Flip the projectile if firing to the left
+            // Відображаємо снаряд, якщо стріляємо вліво
             projectile.setFlipX(player.scaleX === -1);
 
-            // Play the projectile animation
+            // Відтворюємо анімацію снаряду
             projectile.anims.play('projectile_anim', true);
 
-            // Update rotation to follow movement vector
+            // Оновлюємо обертання відповідно до вектору руху
             projectile.update = function () {
                 const angle = Math.atan2(projectile.body.velocity.y, projectile.body.velocity.x);
                 projectile.setRotation(angle);
             };
 
-            // Destroy projectile on impact with platforms or enemies
+            // Знищуємо снаряд при зіткненні з платформами або ворогами
             this.physics.add.collider(projectile, platforms, () => projectile.destroy());
             this.physics.add.overlap(projectile, enemy, (projectile, enemy) => {
                 projectile.destroy();
@@ -589,7 +587,7 @@ function attack() {
                 enemyText.setText('Enemies: ' + enemyCount);
             });
 
-            // Destroy projectile and bomb on impact
+            // Знищуємо снаряд та бомбу при зіткненні
             this.physics.add.overlap(projectile, bombs, (projectile, bomb) => {
                 projectile.destroy();
                 bomb.destroy();
@@ -605,109 +603,107 @@ function attack() {
     });
 }
 
-// Function to show the leaderboard pop-up window centered on the screen
-
+// Функція для показу вікна таблиці лідерів по центру екрану
 function showLeaderboardPopup() {
-        // Stop the timer
-        clearInterval(timerInterval);
+    // Зупиняємо таймер
+    clearInterval(timerInterval);
 
-        // Add current score and time to leaderboard
-        leaderboard.push({ score: score, time: gameTime });
-        leaderboard.sort((a, b) => b.score - a.score); // Sort leaderboard by score
-        leaderboard = leaderboard.slice(0, 5); // Limit to top 5 scores
-        localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+    // Додаємо поточний рахунок і час до таблиці лідерів
+    leaderboard.push({ score: score, time: gameTime });
+    leaderboard.sort((a, b) => b.score - a.score); // Сортуємо таблицю за рахунком
+    leaderboard = leaderboard.slice(0, 5); // Обмежуємо до топ-5 результатів
+    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
 
-        // Build leaderboard list
-        const leaderboardText = leaderboard.map((entry, index) => {
-            return `<li>${index + 1}. Score: ${entry.score}, Time: ${entry.time} sec</li>`;
-        }).join('');
+    // Формуємо список таблиці лідерів
+    const leaderboardText = leaderboard.map((entry, index) => {
+        return `<li>${index + 1}. Score: ${entry.score}, Time: ${entry.time} sec</li>`;
+    }).join('');
 
-        // Show leaderboard in the popup
-        const popupOverlay = document.getElementById('popup-overlay');
-        const popupTitle = document.getElementById('popup-title');
-        const popupLeaderboard = document.getElementById('popup-leaderboard');
-        const popupButton = document.getElementById('popup-button');
+    // Показуємо таблицю лідерів у спливаючому вікні
+    const popupOverlay = document.getElementById('popup-overlay');
+    const popupTitle = document.getElementById('popup-title');
+    const popupLeaderboard = document.getElementById('popup-leaderboard');
+    const popupButton = document.getElementById('popup-button');
 
-        // Ensure the elements exist before modifying them
-        if (popupOverlay && popupTitle && popupLeaderboard && popupButton) {
-            popupTitle.innerHTML = 'Leaderboard:';
-            popupLeaderboard.innerHTML = leaderboardText;
+    // Перевіряємо чи існують елементи перед їх модифікацією
+    if (popupOverlay && popupTitle && popupLeaderboard && popupButton) {
+        popupTitle.innerHTML = 'Leaderboard:';
+        popupLeaderboard.innerHTML = leaderboardText;
 
-            // Show the popup overlay
-            popupOverlay.style.display = 'flex';
+        // Показуємо оверлей спливаючого вікна
+        popupOverlay.style.display = 'flex';
 
-            // Restart button functionality
-            popupButton.onclick = function () {
-                console.log("Restart button clicked");
+        // Функціонал кнопки перезапуску
+        popupButton.onclick = function () {
+            console.log("Restart button clicked");
+            refreshBody();
+            popupOverlay.style.display = 'none'; // Ховаємо спливаюче вікно після натискання перезапуску
+        };
+
+        // Закриваємо спливаюче вікно при натисканні клавіші 'Enter'
+        document.addEventListener('keyup', function (event) {
+            if (event.code == 'Enter') {
+                console.log("Enter key pressed");
                 refreshBody();
-                popupOverlay.style.display = 'none'; // Hide the popup after clicking restart
-            };
-
-            // Close the popup on 'Enter' key press
-            document.addEventListener('keyup', function (event) {
-                if (event.code == 'Enter') {
-                    console.log("Enter key pressed");
-                    refreshBody();
-                    popupOverlay.style.display = 'none'; // Hide the popup
-                }
-            }, { once: true });
-        } else {
-            console.error("Popup elements are not found.");
-        }
+                popupOverlay.style.display = 'none'; // Ховаємо спливаюче вікно
+            }
+        }, { once: true });
+    } else {
+        console.error("Popup elements are not found.");
+    }
 }
 
-
-// Optional: Remove pop-up elements if you need to
+// Опціонально: Видаляємо елементи спливаючого вікна, якщо потрібно
 function removePopup() {
-    this.popupElements.forEach(element => element.destroy());
+this.popupElements.forEach(element => element.destroy());
 }
 
 function startTimer() {
-    gameTime = 0;
-    timerInterval = setInterval(() => {
-      gameTime++;
-      updateGameTimeUI(); // Function to update the time display if needed
-    }, 1000);
-  }
-  
-  function stopTimer() {
-    clearInterval(timerInterval);
-  }
+gameTime = 0;
+timerInterval = setInterval(() => {
+  gameTime++;
+  updateGameTimeUI(); // Функція для оновлення відображення часу, якщо потрібно
+}, 1000);
+}
 
-  function saveToLeaderboard(name) {
-    // Stop the timer
-    stopTimer();
-  
-    // Create a new leaderboard entry
-    const newEntry = {
-      name: name || "Player",  // Replace with a prompt or user input if needed
-      score: playerScore,
-      time: gameTime
-    };
-  
-    // Add the new entry to the leaderboard array
-    leaderboard.push(newEntry);
-  
-    // Sort leaderboard by score, and then by time for ties (lower time is better)
-    leaderboard.sort((a, b) => b.score - a.score || a.time - b.time);
-  
-    // Keep only the top 5 entries (or any desired number)
-    leaderboard = leaderboard.slice(0, 5);
-  
-    // Save updated leaderboard to localStorage
-    localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
-  }
+function stopTimer() {
+clearInterval(timerInterval);
+}
 
-  function endGame(won) {
-    if (won) {
-      // Stop the timer
-      stopTimer();
-  
-      // Save the score to leaderboard
-      const playerName = prompt("Enter your name:");
-      saveToLeaderboard(playerName);
-  
-      // Show the leaderboard
-      showLeaderboard();
-    }
-  }
+function saveToLeaderboard(name) {
+// Зупиняємо таймер
+stopTimer();
+
+// Створюємо новий запис для таблиці лідерів
+const newEntry = {
+  name: name || "Player",  // Замінити на prompt або користувацьке введення, якщо потрібно
+  score: playerScore,
+  time: gameTime
+};
+
+// Додаємо новий запис до масиву таблиці лідерів
+leaderboard.push(newEntry);
+
+// Сортуємо таблицю за рахунком, потім за часом для однакових результатів (менший час кращий)
+leaderboard.sort((a, b) => b.score - a.score || a.time - b.time);
+
+// Зберігаємо тільки топ-5 записів (або будь-яку бажану кількість)
+leaderboard = leaderboard.slice(0, 5);
+
+// Зберігаємо оновлену таблицю лідерів у localStorage
+localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+}
+
+function endGame(won) {
+if (won) {
+  // Зупиняємо таймер
+  stopTimer();
+
+  // Зберігаємо рахунок у таблицю лідерів
+  const playerName = prompt("Enter your name:");
+  saveToLeaderboard(playerName);
+
+  // Показуємо таблицю лідерів
+  showLeaderboard();
+}
+}
